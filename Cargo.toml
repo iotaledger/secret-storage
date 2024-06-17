@@ -1,0 +1,25 @@
+[package]
+name = "secret-storage"
+version = "0.1.0"
+edition = "2021"
+
+
+[dependencies]
+anyhow = "1.0.86"
+
+
+serde = { version = "1.0.130", features = ["derive"], optional = true }
+sui-types = { git = "https://github.com/MystenLabs/sui", package = "sui-types", optional = true }
+shared-crypto = { git = "https://github.com/MystenLabs/sui", package = "shared-crypto", optional = true }
+bcs = { version = "0.1.6", optional = true }
+fastcrypto = { version = "0.1.8", optional = true }
+
+[features]
+
+transaction_helpers = [
+  "serde",
+  "sui-types",
+  "shared-crypto",
+  "bcs",
+  "fastcrypto",
+]
