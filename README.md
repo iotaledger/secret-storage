@@ -25,6 +25,17 @@ To use this library in your project, add it as a dependency in your `Cargo.toml`
 secret-storage = "0.1.0"
 ```
 
+or
+
+when you want to transaction utils that enables dependency on SUI:
+
+```toml
+[dependencies]
+secret-storage =  { version = "0.1.0", features="transaction_utils"}
+
+```
+
+
 ## Contributing
 
 Contributions are welcome! Feel free to open pull requests or issues to suggest improvements or add new features.
