@@ -24,7 +24,7 @@ pub trait KeyCreate<K: KeySignatureSet> {
 /// KeySign trait is a trait that is used to sign a hash with a private key located in a key store. The method return a [`Signer`] object.
 pub trait KeySign<K: KeySignatureSet> {
     type KeyID;
-    fn signer(&self, key_id: Self::KeyID) -> impl Signer<K>;
+    fn get_signer(&self, key_id: Self::KeyID) -> Result<impl Signer<K>, anyhow::Error>;
 }
 
 /// KeyDelete trait is a trait that is used to delete a key pair from the key store.

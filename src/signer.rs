@@ -1,6 +1,5 @@
 use crate::key_signature_set::KeySignatureSet;
 
-
 /// Signer trait is a trait that is used to sign a hash with a private key located in a key store.
 /// The method is key-type agnostic, meaning that it can be used to sign a hash with any key type. The key-type is defined by the KeySignatureSet trait.
 /// The purpose of this trait is to allow for more flexibility in the implementation of the key storage and avoid unnecessary dependencies and hidden functionalities.
