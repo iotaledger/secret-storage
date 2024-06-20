@@ -27,14 +27,13 @@ secret-storage = "0.1.0"
 
 or
 
-when you want to transaction utils that enables dependency on SUI:
+when you want transaction utils that enable dependency on SUI:
 
 ```toml
 [dependencies]
 secret-storage =  { version = "0.1.0", features="transaction_utils"}
 
 ```
-
 
 ## Contributing
 

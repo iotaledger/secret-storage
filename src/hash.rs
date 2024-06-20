@@ -2,6 +2,8 @@ use fastcrypto::hash::{Blake2b256, HashFunction};
 use serde::Serialize;
 use shared_crypto::intent::{Intent, IntentMessage};
 
+/// ToHash trait is a helper trait that allows to calculate the hash of the data.
+/// The calculation of hash is domain (IOTA) specific, therefor this trait is not included with default features.
 pub trait ToHash {
     fn calculate_data_hash(&self) -> [u8; 32];
 }
