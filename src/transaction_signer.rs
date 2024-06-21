@@ -1,21 +1,23 @@
+use std::future::Future;
+
 use iota_types::crypto::Signature as IotaSignature;
 use iota_types::transaction::TransactionData;
 
-use crate::{hash::ToHash, key_signature_set::KeySignatureSet, prelude::Signer};
+use crate::{hash::ToHash, key_signature_set::KeySignatureTypes, prelude::Signer};
 
 /// Transaction signer trait is a trait is a helper auto-trait that allows to sign IOTA Transactions
 /// This trait requires to `transaction_helper` feature to be enabled.
 /// Because the `TransactionData` and `Signature` are domain specific, the `transaction_helper` feature
 /// is disabled by default.
-pub trait TransactionSigner<K: KeySignatureSet>: Signer<K> {
-    async fn sign_transaction(
+pub trait TransactionSigner<K: KeySignatureTypes>: Signer<K> {
+    fn sign_transaction(
         &self,
         transaction: &TransactionData,
-    ) -> Result<IotaSignature, anyhow::Error>
+    ) -> impl Future<Output = Result<IotaSignature, anyhow::Error>>
     where
         K::Signature: Into<IotaSignature>,
     {
         let hash = transaction.calculate_data_hash();
-        self.sign(hash).await.map(Into::into)
+        async move { self.sign(hash).await.map(Into::into) }
     }
 }

@@ -1,10 +1,15 @@
-use crate::key_signature_set::KeySignatureSet;
+use std::future::Future;
+
+use crate::key_signature_set::KeySignatureTypes;
 
 /// Signer trait is a trait that is used to sign a hash with a private key located in a key store.
 /// The method is key-type agnostic, meaning that it can be used to sign a hash with any key type. The key-type is defined by the KeySignatureSet trait.
 /// The purpose of this trait is to allow for more flexibility in the implementation of the key storage and avoid unnecessary dependencies and hidden functionalities.
 ///
 /// In simple cases user may wish to not use the full key storage functionality and only sign data. In such cases, the Signer trait can be used.
-pub trait Signer<K: KeySignatureSet> {
-    async fn sign(&self, hash: impl AsRef<[u8]>) -> Result<K::Signature, anyhow::Error>;
+pub trait Signer<K: KeySignatureTypes> {
+    fn sign(
+        &self,
+        hash: impl AsRef<[u8]>,
+    ) -> impl Future<Output = Result<K::Signature, anyhow::Error>>;
 }
