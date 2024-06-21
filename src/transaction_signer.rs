@@ -11,7 +11,7 @@ pub trait TransactionSigner<K: KeySignatureSet>: Signer<K> {
     async fn sign_transaction(
         &self,
         transaction: &TransactionData,
-    ) -> Result<iota_types::crypto::Signature, anyhow::Error>
+    ) -> Result<IotaSignature, anyhow::Error>
     where
         K::Signature: Into<IotaSignature>,
     {
