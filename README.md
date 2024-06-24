@@ -1,7 +1,6 @@
-# Cryptographic Key Management Library
+# Cryptographic Key Store Library
 
-
-This library offers a comprehensive solution for managing cryptographic keys within Rust applications. It provides a set of traits for creating, signing, deleting, checking the existence of, and retrieving cryptographic keys. This versatility makes it an essential tool for secure key management.
+This library offers a comprehensive solution for storing cryptographic keys within Rust applications. It provides a set of traits for creating, signing, deleting, checking the existence of, and retrieving cryptographic keys. This versatility makes it an essential tool for secure key management.
 
 The library aims to establish a lightweight standardization layer without introducing any opinionated solutions for key management. It leverages the flexibility of the Iota (Sui) SDK, allowing the separation of the signing process from the SDK flow. This separation offers a significant advantage for users with existing complex key management solutions, facilitating easier integration and use.
 
@@ -25,7 +24,7 @@ The enclave principle in key management refers to the use of secure, isolated en
 
 ### Least privilege principle
 
-The system should have only the minimal set of permissions necessary to perform its intended function. This principle aims to reduce the potential damage that could occur if a user, process, or program is compromised or misbehaves.
+  The system should have only the minimal set of permissions necessary to perform its intended function. This principle aims to reduce the potential damage that could occur if a user, process, or program is compromised or misbehaves.
 
 **Implementation**: The library specifies atomic 'permissions' such as `KeyRead`, `KeySign`, etc., allowing only the features actually used by the library. This approach prevents alternative, potentially insecure paths from being available to the user.
 
