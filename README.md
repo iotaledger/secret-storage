@@ -62,7 +62,7 @@ secret-storage =  { version = "https://github.com/iotaledger/secret-storage", fe
 
 ## Usage
 
-The example shows how the secret storage interface can be used when signing the `TransactionData`:
+The example shows how the secret storage interface can be used when signing the `TransactionData` from [IOTA-SDK](https://github.com/iotaledger/iota):
 
 ```rust
 struct ExampleSdkTypes {}

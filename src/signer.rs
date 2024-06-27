@@ -1,4 +1,4 @@
-use std::future::Future;
+use async_trait::async_trait;
 
 use crate::key_signature_set::KeySignatureTypes;
 
@@ -7,9 +7,7 @@ use crate::key_signature_set::KeySignatureTypes;
 /// The purpose of this trait is to allow for more flexibility in the implementation of the key storage and avoid unnecessary dependencies and hidden functionalities.
 ///
 /// In simple cases user may wish to not use the full key storage functionality and only sign data. In such cases, the Signer trait can be used.
-pub trait Signer<K: KeySignatureTypes> {
-    fn sign(
-        &self,
-        hash: impl AsRef<[u8]>,
-    ) -> impl Future<Output = Result<K::Signature, anyhow::Error>>;
+#[async_trait]
+pub trait Signer<K: KeySignatureTypes>: Send + Sync {
+    fn sign(&self, hash: impl AsRef<[u8]>) -> Result<K::Signature, anyhow::Error>;
 }

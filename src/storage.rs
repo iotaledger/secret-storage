@@ -1,4 +1,4 @@
-use std::future::Future;
+use async_trait::async_trait;
 
 use crate::key_signature_set::KeySignatureTypes;
 use crate::signer::Signer;
@@ -19,47 +19,49 @@ pub trait KeysStorage<K: KeySignatureTypes>:
 }
 
 /// KeyCreate trait is a trait that is used to generate a new key pair. Returns the key ID and the public key
-pub trait KeyGenerate<K: KeySignatureTypes> {
+#[async_trait]
+pub trait KeyGenerate<K: KeySignatureTypes>: Sync + Send {
     type KeyID;
-    fn generate(&self) -> impl Future<Output = Result<(Self::KeyID, K::PublicKey), anyhow::Error>>;
+    async fn generate(&self) -> Result<(Self::KeyID, K::PublicKey), anyhow::Error>;
 }
 
 /// KeyCreate trait is a trait that is used to generate a new key pair. Returns the key ID and the public key
-pub trait KeyCreateWithOptions<K: KeySignatureTypes> {
+#[async_trait]
+pub trait KeyGenerateWithOptions<K: KeySignatureTypes>: Sync + Send {
     type KeyID;
     type Options;
+
     fn generate(
         &self,
         options: Option<Self::Options>,
-    ) -> impl Future<Output = Result<(Self::KeyID, K::PublicKey), anyhow::Error>>;
+    ) -> Result<(Self::KeyID, K::PublicKey), anyhow::Error>;
 }
 
 /// KeySign trait is a trait that is used to sign a hash with a private key located in a key store. The method return a [`Signer`] object.
-pub trait KeySign<K: KeySignatureTypes> {
+#[async_trait]
+pub trait KeySign<K: KeySignatureTypes>: Sync + Send {
     type KeyID;
-    fn get_signer(
-        &self,
-        key_id: Self::KeyID,
-    ) -> Result<impl Signer<K> + Sync + Send, anyhow::Error>;
+    async fn get_signer(&self, key_id: Self::KeyID) -> Result<impl Signer<K>, anyhow::Error>;
 }
 
 /// KeyDelete trait is a trait that is used to delete a key pair from the key store.
-pub trait KeyDelete<K: KeySignatureTypes> {
+#[async_trait]
+pub trait KeyDelete<K: KeySignatureTypes>: Sync + Send {
     type KeyID;
-    fn delete(&self, key_id: &Self::KeyID) -> impl Future<Output = Result<(), anyhow::Error>>;
+
+    async fn delete(&self, key_id: &Self::KeyID) -> Result<(), anyhow::Error>;
 }
 
 /// KeyExists trait is a trait that is used to check if a key pair with given id exists in the key store.
-pub trait KeyExist<K: KeySignatureTypes> {
+#[async_trait]
+pub trait KeyExist<K: KeySignatureTypes>: Sync + Send {
     type KeyID;
-    fn exists(&self, key_id: &Self::KeyID) -> impl Future<Output = Result<bool, anyhow::Error>>;
+    fn exists(&self, key_id: &Self::KeyID) -> Result<bool, anyhow::Error>;
 }
 
 /// KeyGet trait is a trait that is used to get a public key from the key store.
-pub trait KeyGet<K: KeySignatureTypes> {
+#[async_trait]
+pub trait KeyGet<K: KeySignatureTypes>: Sync + Send {
     type KeyID;
-    fn get(
-        &self,
-        key_id: &Self::KeyID,
-    ) -> impl Future<Output = Result<K::PublicKey, anyhow::Error>>;
+    fn get(&self, key_id: &Self::KeyID) -> Result<K::PublicKey, anyhow::Error>;
 }
