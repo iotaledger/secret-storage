@@ -28,6 +28,6 @@ where
         transaction: &TransactionData,
     ) -> Result<IotaSignature, anyhow::Error> {
         let hash = transaction.get_hash();
-        self.sign(hash).map(Into::into)
+        self.sign(&hash).await.map(Into::into)
     }
 }
