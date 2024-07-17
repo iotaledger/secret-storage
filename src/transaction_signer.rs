@@ -8,7 +8,8 @@ use async_trait::async_trait;
 /// This trait requires to `transaction_helper` feature to be enabled.
 /// Because the `TransactionData` and `Signature` are domain specific, the `transaction_helper` feature
 /// is disabled by default.
-#[async_trait]
+#[cfg_attr(not(feature = "send-sync-storage"), async_trait(?Send))]
+#[cfg_attr(feature = "send-sync-storage", async_trait)]
 pub trait TransactionSigner<K: KeySignatureTypes>: Send + Sync {
     async fn sign_transaction(
         &self,
@@ -16,7 +17,8 @@ pub trait TransactionSigner<K: KeySignatureTypes>: Send + Sync {
     ) -> Result<IotaSignature, anyhow::Error>;
 }
 
-#[async_trait]
+#[cfg_attr(not(feature = "send-sync-storage"), async_trait(?Send))]
+#[cfg_attr(feature = "send-sync-storage", async_trait)]
 impl<K, T> TransactionSigner<K> for T
 where
     K: KeySignatureTypes,

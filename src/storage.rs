@@ -19,15 +19,17 @@ pub trait KeysStorage<K: KeySignatureTypes>:
 }
 
 /// KeyCreate trait is a trait that is used to generate a new key pair. Returns the key ID and the public key
-#[async_trait]
-pub trait KeyGenerate<K: KeySignatureTypes>: Sync + Send {
+#[cfg_attr(not(feature = "send-sync-storage"), async_trait(?Send))]
+#[cfg_attr(feature = "send-sync-storage", async_trait)]
+pub trait KeyGenerate<K: KeySignatureTypes> {
     type KeyID;
     async fn generate_key(&self) -> Result<(Self::KeyID, K::PublicKey), anyhow::Error>;
 }
 
 /// KeyCreate trait is a trait that is used to generate a new key pair. Returns the key ID and the public key
-#[async_trait]
-pub trait KeyGenerateWithOptions<K: KeySignatureTypes>: Sync + Send {
+#[cfg_attr(not(feature = "send-sync-storage"), async_trait(?Send))]
+#[cfg_attr(feature = "send-sync-storage", async_trait)]
+pub trait KeyGenerateWithOptions<K: KeySignatureTypes> {
     type KeyID;
     type Options;
 
@@ -38,29 +40,32 @@ pub trait KeyGenerateWithOptions<K: KeySignatureTypes>: Sync + Send {
 }
 
 /// KeySign trait is a trait that is used to sign a hash with a private key located in a key store. The method return a [`Signer`] object.
-pub trait KeySign<K: KeySignatureTypes>: Sync + Send {
+pub trait KeySign<K: KeySignatureTypes> {
     type KeyID;
     fn get_signer(&self, key_id: Self::KeyID) -> Result<impl Signer<K>, anyhow::Error>;
 }
 
 /// KeyDelete trait is a trait that is used to delete a key pair from the key store.
-#[async_trait]
-pub trait KeyDelete<K: KeySignatureTypes>: Sync + Send {
+#[cfg_attr(not(feature = "send-sync-storage"), async_trait(?Send))]
+#[cfg_attr(feature = "send-sync-storage", async_trait)]
+pub trait KeyDelete<K: KeySignatureTypes> {
     type KeyID;
 
     async fn delete_key(&self, key_id: &Self::KeyID) -> Result<(), anyhow::Error>;
 }
 
 /// KeyExists trait is a trait that is used to check if a key pair with given id exists in the key store.
-#[async_trait]
-pub trait KeyExist<K: KeySignatureTypes>: Sync + Send {
+#[cfg_attr(not(feature = "send-sync-storage"), async_trait(?Send))]
+#[cfg_attr(feature = "send-sync-storage", async_trait)]
+pub trait KeyExist<K: KeySignatureTypes> {
     type KeyID;
     async fn does_key_exist(&self, key_id: &Self::KeyID) -> Result<bool, anyhow::Error>;
 }
 
 /// KeyGet trait is a trait that is used to get a public key from the key store.
-#[async_trait]
-pub trait KeyGet<K: KeySignatureTypes>: Sync + Send {
+#[cfg_attr(not(feature = "send-sync-storage"), async_trait(?Send))]
+#[cfg_attr(feature = "send-sync-storage", async_trait)]
+pub trait KeyGet<K: KeySignatureTypes> {
     type KeyID;
     async fn get_public_key(&self, key_id: &Self::KeyID) -> Result<K::PublicKey, anyhow::Error>;
 }
