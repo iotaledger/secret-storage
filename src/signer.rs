@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 
+use crate::KeyGet;
 use crate::Result;
 use crate::SignatureScheme;
 
@@ -10,10 +11,8 @@ use crate::SignatureScheme;
 /// In simple cases user may wish to not use the full key storage functionality and only sign data. In such cases, the Signer trait can be used.
 #[cfg_attr(not(feature = "send-sync-storage"), async_trait(?Send))]
 #[cfg_attr(feature = "send-sync-storage", async_trait)]
-pub trait Signer<K: SignatureScheme> {
-    async fn sign(
-        &self,
-        #[cfg(not(feature = "send-sync-storage"))] data: impl AsRef<[u8]> + Send,
-        #[cfg(feature = "send-sync-storage")] data: impl AsRef<[u8]>,
-    ) -> Result<K::Signature>;
+pub trait Signer<K: SignatureScheme>: KeyGet<K, Self::KeyId> {
+    type KeyId;
+    async fn sign(&self, data: &[u8]) -> Result<K::Signature>;
+    fn key_id(&self) -> &Self::KeyId;
 }
