@@ -14,5 +14,8 @@ use crate::SignatureScheme;
 pub trait Signer<K: SignatureScheme>: KeyGet<K, Self::KeyId> {
     type KeyId;
     async fn sign(&self, data: &[u8]) -> Result<K::Signature>;
+    async fn public_key(&self) -> Result<K::PublicKey> {
+        <Self as KeyGet<_, _>>::public_key(&self, self.key_id()).await
+    }
     fn key_id(&self) -> &Self::KeyId;
 }
