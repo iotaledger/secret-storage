@@ -1,8 +1,12 @@
-# Cryptographic Key Store Library
+# Secret
+
+## Introduction
+
+## Cryptographic Key Store Library
 
 This library offers a comprehensive solution for storing cryptographic keys within Rust applications. It provides a set of traits for creating, signing, deleting, checking the existence of, and retrieving cryptographic keys. This versatility makes it an essential tool for secure key management.
 
-The library aims to establish a lightweight standardization layer without introducing any opinionated solutions for key management. It leverages the flexibility of the Iota (Sui) SDK, allowing the separation of the signing process from the SDK flow. This separation offers a significant advantage for users with existing complex key management solutions, facilitating easier integration and use.
+The library aims to establish a lightweight standardization layer without introducing any opinionated solutions for key management. It leverages the flexibility of the Iota SDK, allowing the separation of the signing process from the SDK flow. This separation offers a significant advantage for users with existing complex key management solutions, facilitating easier integration and use.
 
 ## Features
 
@@ -51,12 +55,13 @@ secret-storage = { git="https://github.com/iotaledger/secret-storage"}
 
 #### Feature flags
 
-`transaction_helpers` - enables the dependency on IOTA SDK and introduce useful abstractions for signing
-the transaction payload
+`send-sync-storage` - This feature flag enables the secret storage to be used in a multi-threaded environment. It provides a `Send + Sync` storage implementation.
+
+Note: The `send-sync-storage` feature is enabled by default.
 
 ```toml
 [dependencies]
-secret-storage =  { version = "https://github.com/iotaledger/secret-storage", features="transaction_utils"}
+secret-storage =  { version = "https://github.com/iotaledger/secret-storage", features="[send-sync-storage]" }
 
 ```
 
@@ -72,11 +77,11 @@ impl KeySignatureTypes for ExampleSdkTypes {
 }
 
 async fn using_signer(
-    client: SuiClient,
+    client: IotaClient,
     kms: impl KeysStorage<ExampleSdkTypes, KeyID = String>,
 ) -> Result<()> {
     // Define the account address and module address
-    let account_address = SuiAddress::from_str("").expect("account address must be valid");
+    let account_address = IotaAddress::from_str("").expect("account address must be valid");
     let module_address = ObjectID::from_str("").expect("object id must be valid");
 
     // Transaction builder creates a transaction data.
@@ -89,7 +94,7 @@ async fn using_signer(
             "trail",
             "create_new_trail_and_own",
             vec![],
-            vec![SuiJsonValue::new(json!("data")).context("failed to serialize immutable data")?],
+            vec![IotaJsonValue::new(json!("data")).context("failed to serialize immutable data")?],
             None,
             1000000000,
             None,
@@ -122,7 +127,15 @@ async fn using_signer(
 
 ## Contributing
 
-Contributions are welcome! Feel free to open pull requests or issues to suggest improvements or add new features.
+Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are greatly appreciated.
+
+If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement". Don't forget to give the project a star! Thanks again!
+
+- Fork the Project
+- Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+- Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+- Push to the Branch (`git push origin feature/AmazingFeature`)
+- Open a Pull Request
 
 ## License
 
