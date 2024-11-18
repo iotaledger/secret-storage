@@ -1,8 +1,15 @@
 [package]
-
 name = "secret-storage"
 version = "0.1.0"
 edition = "2021"
+authors = ["IOTA Stiftung"]
+homepage = "https://www.iota.org"
+license = "Apache-2.0"
+repository = "https://github.com/iotaledger/secret-storage"
+rust-version = "1.65"
+readme = "./README.md"
+description = "A flexible and secure key storage interface for working with cryptographic keys and signatures with modular traits for key generation, signing, and management."
+keywords = ["crypto", "storage", "keys", "signatures", "security"]
 
 [dependencies]
 anyhow = "1"
