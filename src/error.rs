@@ -1,3 +1,6 @@
+// Copyright 2020-2024 IOTA Stiftung
+// SPDX-License-Identifier: Apache-2.0
+
 use thiserror::Error;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
