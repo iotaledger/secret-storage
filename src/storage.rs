@@ -44,8 +44,10 @@ pub trait KeyGenerate<K: SignatureScheme, I> {
 }
 
 /// KeySign trait is a trait that is used to sign a hash with a private key located in a key store. The method return a [`Signer`] object.
+#[cfg_attr(not(feature = "send-sync-storage"), async_trait(?Send))]
+#[cfg_attr(feature = "send-sync-storage", async_trait)]
 pub trait KeySign<K: SignatureScheme, I> {
-    fn get_signer(&self, key_id: &I) -> Result<impl Signer<K, KeyId = I>>;
+    async fn get_signer(&self, key_id: &I) -> Result<impl Signer<K, KeyId = I>>;
 }
 
 /// KeyDelete trait is a trait that is used to delete a key pair from the key store.
