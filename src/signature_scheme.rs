@@ -5,4 +5,5 @@
 pub trait SignatureScheme {
     type PublicKey;
     type Signature;
+    type Input;
 }
