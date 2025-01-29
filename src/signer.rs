@@ -15,7 +15,10 @@ use crate::SignatureScheme;
 #[cfg_attr(feature = "send-sync-storage", async_trait)]
 pub trait Signer<K: SignatureScheme> {
     type KeyId;
-    async fn sign(&self, data: &[u8]) -> Result<K::Signature>;
+
+    async fn sign(&self, data: &K::Input) -> Result<K::Signature>;
+
     async fn public_key(&self) -> Result<K::PublicKey>;
+
     fn key_id(&self) -> &Self::KeyId;
 }
