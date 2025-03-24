@@ -20,5 +20,5 @@ pub trait Signer<K: SignatureScheme> {
 
     async fn public_key(&self) -> Result<K::PublicKey>;
 
-    fn key_id(&self) -> &Self::KeyId;
+    fn key_id(&self) -> Self::KeyId;
 }
