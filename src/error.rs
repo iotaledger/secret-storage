@@ -6,6 +6,15 @@ use thiserror::Error;
 #[cfg(not(feature = "std"))]
 extern crate alloc;
 
+#[cfg(not(feature = "std"))]
+use alloc::boxed::Box;
+
+#[cfg(feature = "std")]
+use std::error::Error as StdError;
+
+#[cfg(not(feature = "std"))]
+use core::error::Error as CoreError;
+
 pub type Result<T, E = Error> = core::result::Result<T, E>;
 
 #[cfg(feature = "std")]
@@ -18,7 +27,7 @@ pub enum Error {
     #[error("failed to generate key with provided options")]
     InvalidOptions,
     #[error(transparent)]
-    Other(anyhow::Error),
+    Other(Box<dyn StdError + Send + Sync>),
 }
 
 #[cfg(not(feature = "std"))]
@@ -30,6 +39,6 @@ pub enum Error {
     StoreDisconnected(alloc::string::String),
     #[error("failed to generate key with provided options")]
     InvalidOptions,
-    #[error("other error: {0}")]
-    Other(alloc::string::String),
+    #[error(transparent)]
+    Other(Box<dyn CoreError + Send + Sync>),
 }
