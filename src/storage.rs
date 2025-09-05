@@ -3,6 +3,9 @@
 
 use async_trait::async_trait;
 
+#[cfg(not(feature = "std"))]
+use alloc::boxed::Box;
+
 use crate::signature_scheme::SignatureScheme;
 use crate::signer::Signer;
 use crate::Result;

@@ -12,10 +12,11 @@ description = "A flexible and secure key storage interface for working with cryp
 keywords = ["crypto", "storage", "keys", "signatures", "security"]
 
 [dependencies]
-anyhow = "1"
-thiserror = "2"
-async-trait = "0.1"
+thiserror = { version = "2", optional = true, default-features = false }
+async-trait = { version = "0.1", optional = true }
 
 [features]
-default = ["send-sync-storage"]
+default = ["std", "send-sync-storage"]
+std = ["thiserror/std", "async-trait"]
 send-sync-storage = []
+no-std = ["thiserror", "async-trait"]
