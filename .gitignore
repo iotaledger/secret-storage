@@ -1,2 +1,6 @@
 /target
 Cargo.lock
+
+.env
+CLAUDE.md
+.DS_Store

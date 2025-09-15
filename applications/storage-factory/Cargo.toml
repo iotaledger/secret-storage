@@ -1,0 +1,44 @@
+[package]
+name = "storage-factory"
+version = "0.1.0"
+edition = "2021"
+authors = ["IOTA Stiftung"]
+homepage = "https://www.iota.org"
+license = "Apache-2.0"
+repository = "https://github.com/iotaledger/secret-storage"
+rust-version = "1.65"
+description = "Builder pattern and factory for selecting and configuring secret storage adapters"
+keywords = ["crypto", "storage", "factory", "builder", "adapter"]
+
+[dependencies]
+secret-storage-core = { path = "../../core/secret-storage" }
+aws-kms-adapter = { path = "../../adapters/aws-kms-adapter", optional = true }
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "2"
+anyhow = "1"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+uuid = { version = "1.0", features = ["v4"] }
+iota = { git = "https://github.com/iotaledger/iota.git", package = "iota", tag = "v1.6.1" }
+iota-keys = { git = "https://github.com/iotaledger/iota.git", package = "iota-keys", tag = "v1.6.1" }
+iota-sdk = { git = "https://github.com/iotaledger/iota.git", package = "iota-sdk", tag = "v1.6.1" }
+iota-types = { git = "https://github.com/iotaledger/iota.git", package = "iota-types", tag = "v1.6.1" }
+iota-config = { git = "https://github.com/iotaledger/iota.git", package = 'iota-config', tag = "v1.6.1" }
+iota-json-rpc-types = { git = "https://github.com/iotaledger/iota.git", package = 'iota-json-rpc-types', tag = "v1.6.1" }
+move_core_types = { git = "https://github.com/iotaledger/iota.git", package = "move-core-types", tag = "v1.6.1" }
+secret-storage = { git = "https://github.com/iotaledger/secret-storage", tag = "v0.3.0" }
+shared-crypto = { git = "https://github.com/iotaledger/iota.git", package = "shared-crypto", tag = "v1.6.1" }
+blake2 = "0.10"
+sha2 = "0.10"
+typenum = "1.0"
+bcs = "0.1"
+fastcrypto = { git = "https://github.com/MystenLabs/fastcrypto", rev = "69d496c71fb37e3d22fe85e5bbfd4256d61422b9" }
+base64 = "0.21"
+
+[dev-dependencies]
+hex = "0.4"
+
+[features]
+default = ["aws-kms"]
+aws-kms = ["dep:aws-kms-adapter"]

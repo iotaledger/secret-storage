@@ -1,142 +1,196 @@
-# Secret Storage
+# IOTA Secret Storage - Refactored Architecture
 
-## Introduction
+A flexible and secure key storage ecosystem for IOTA Trust Framework, following hexagonal architecture principles with modular adapters for different key management strategies.
 
-## Cryptographic Key Store Library
+## 🏗️ Architecture Overview
 
-This library offers a comprehensive solution for storing cryptographic keys within Rust applications. It provides a set of traits for creating, signing, deleting, checking the existence of, and retrieving cryptographic keys. This versatility makes it an essential tool for secure key management.
+This repository implements a multi-layered approach to key management:
 
-The library aims to establish a lightweight standardization layer without introducing any opinionated solutions for key management. It leverages the flexibility of the Iota SDK, allowing the separation of the signing process from the SDK flow. This separation offers a significant advantage for users with existing complex key management solutions, facilitating easier integration and use.
+- **Core Domain**: Pure business logic and trait definitions
+- **Adapters**: Infrastructure implementations (AWS KMS, file system, passkey, etc.)
+- **Applications**: Use case orchestration and adapter selection
 
-## Features
-
-- **Key Creation**: Easily generate new cryptographic keys.
-- **Key Signing**: Use keys for signing operations.
-- **Key Deletion**: Securely delete keys when they are no longer needed.
-- **Key Existence Check**: Verify the presence of keys in the storage.
-- **Key Retrieval**: Access keys for cryptographic operations.
-
-## Security aspect
-
-The library promotes the following security concepts:
-
-### Enclave principle
-
-The enclave principle in key management refers to the use of secure, isolated environments (enclaves) for the management and protection of cryptographic keys. These enclaves provide a trusted execution environment (TEE) where sensitive operations can be performed securely, even on potentially compromised or untrusted systems.
-
-**Implementation**: The interfaces are designed with the assumption that private keys cannot be generated or stored outside secure enclaves.
-
-### Least privilege principle
-
-  The system should have only the minimal set of permissions necessary to perform its intended function. This principle aims to reduce the potential damage that could occur if a user, process, or program is compromised or misbehaves.
-
-**Implementation**: The library specifies atomic 'permissions' such as `KeyRead`, `KeySign`, etc., allowing only the features actually used by the library. This approach prevents alternative, potentially insecure paths from being available to the user.
-
-### Explicit boundaries principle
-
-The explicit Boundaries principle involves defining clear and explicit interfaces that separate the provider's code from the user's code. These boundaries ensure that there is a clear contract regarding how the provider's code should be used and what responsibilities it assumes.
-
-**Implementation**: The interface definitions clarify the boundaries between user code and provider code, emphasizing the importance of responsibility for damages caused by insecure code.
-
-## Getting Started
-
-### Prerequisites
-
-This library is built with Rust, so you'll need Rust and Cargo installed on your system. You can install them from [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install).
-
-### Installation
-
-To use this library in your project, add it as a dependency in your `Cargo.toml` file:
-
-```toml
-[dependencies]
-secret-storage = { git="https://github.com/iotaledger/secret-storage"}
-```
-
-#### Feature flags
-
-`send-sync-storage` - This feature flag enables the secret storage to be used in a multi-threaded environment. It provides a `Send + Sync` storage implementation.
-
-Note: The `send-sync-storage` feature is enabled by default.
-
-```toml
-[dependencies]
-secret-storage =  { version = "https://github.com/iotaledger/secret-storage", features="[send-sync-storage]" }
+## 📁 Repository Structure
 
 ```
+secret-storage/
+├── core/
+│   └── secret-storage/              # Core traits and types
+├── adapters/                        # Infrastructure adapters
+│   └── aws-kms-adapter/            # AWS KMS implementation
+├── applications/                    # Application layer
+│   └── storage-factory/            # Builder pattern for adapter selection
+├── .env.example                    # Environment variables template
+└── README.md
+```
 
-## Usage
+## 🚀 Quick Start
 
-The example shows how the secret storage interface can be used when signing the `TransactionData` from [IOTA-SDK](https://github.com/iotaledger/iota):
+### 1. AWS Configuration Setup
+
+For detailed AWS setup instructions, see [AWS Setup Guide](README-AWS.md).
+
+Quick configuration options:
+
+**Option 1: AWS Profile (Recommended)**
+```bash
+export AWS_PROFILE=your-profile-name
+export AWS_REGION=eu-west-1
+```
+
+**Option 2: Direct Credentials**
+```bash
+export AWS_ACCESS_KEY_ID=your_access_key
+export AWS_SECRET_ACCESS_KEY=your_secret_key
+export AWS_REGION=eu-west-1
+```
+
+### 2. Run IOTA KMS Demo
+
+```bash
+AWS_REGION=eu-west-1 AWS_PROFILE=your-profile cargo run --package storage-factory --example iota_kms_demo
+```
+
+This demo will:
+- Generate a new KMS key with dynamic alias
+- Create an IOTA address from the public key
+- Request testnet funds via faucet
+- Sign and submit an IOTA transaction
+
+### 3. Manual Adapter Configuration
 
 ```rust
-struct ExampleSdkTypes {}
-impl KeySignatureTypes for ExampleSdkTypes {
-    type PublicKey = String;
-    type Signature = Signature;
-}
+use storage_factory::StorageBuilder;
 
-async fn using_signer(
-    client: IotaClient,
-    kms: impl KeysStorage<ExampleSdkTypes, KeyID = String>,
-) -> Result<()> {
-    // Define the account address and module address
-    let account_address = IotaAddress::from_str("").expect("account address must be valid");
-    let module_address = ObjectID::from_str("").expect("object id must be valid");
-
-    // Transaction builder creates a transaction data.
-    // In this case, the transaction calls the `create_new_trail_and_own`` from `trails` module
-    let transaction_data = client
-        .transaction_builder()
-        .move_call(
-            account_address,
-            module_address,
-            "trail",
-            "create_new_trail_and_own",
-            vec![],
-            vec![IotaJsonValue::new(json!("data")).context("failed to serialize immutable data")?],
-            None,
-            1000000000,
-            None,
-        )
-        .await
-        .context("failed building transaction data for creating new trail and owning it");
-
-    // Obtaining the signer from the kms for specific key_id
-    let signer = kms.get_signer("key_id").expect("key not found");
-
-    // Sign the transaction data
-    let signature = signer
-        .sign(transaction_data.get_data_to_sign())
-        .await
-        .unwrap();
-
-    // Create a Transaction that includes the TransactionData and the Signature
-    let transaction = Transaction::from_data(transaction_data, vec![signature]);
-
-    // Send Transaction to using the sdk client
-    let transaction_block_response = client
-        .quorum_driver_api()
-        .execute_transaction_block(transaction, Default::default, None)
-        .await
-        .context("failed to execute transaction block")?;
-
-    Ok(())
-}
+// Explicit AWS KMS configuration
+let storage = StorageBuilder::new()
+    .aws_kms()
+    .with_region("eu-west-1".to_string())
+    .build_aws_kms()
+    .await?;
 ```
 
-## Contributing
+## 🔧 AWS Authentication
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are greatly appreciated.
+The code supports both authentication methods:
 
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement". Don't forget to give the project a star! Thanks again!
+**Method 1: AWS Profile (Recommended)**
+```bash
+AWS_PROFILE=your-profile-name
+AWS_REGION=eu-west-1
+```
 
-- Fork the Project
-- Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-- Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-- Push to the Branch (`git push origin feature/AmazingFeature`)
-- Open a Pull Request
+**Method 2: Direct Credentials**
+```bash
+AWS_ACCESS_KEY_ID=your_access_key
+AWS_SECRET_ACCESS_KEY=your_secret_key
+AWS_REGION=eu-west-1
+```
 
-## License
+The `StorageBuilder` automatically detects which method is available:
+- If `AWS_PROFILE` is set, uses profile-based authentication
+- Otherwise, uses direct credentials from environment variables
 
-Distributed under the Apache License. See LICENSE for more information.
+See [AWS Setup Guide](README-AWS.md) for detailed configuration instructions.
+
+For comprehensive architecture documentation, see [Technical Documentation](doc/documentation.en.md).
+```
+
+
+## 📋 Examples
+
+### IOTA KMS Demo (Main Example)
+
+```bash
+AWS_REGION=eu-west-1 AWS_PROFILE=your-profile cargo run --package storage-factory --example iota_kms_demo
+```
+
+## 🔍 Implemented Features
+
+### ✅ Core Traits
+- [x] `KeyGenerate` - Generate new key pairs
+- [x] `KeySign` - Sign data with stored keys
+- [x] `KeyDelete` - Delete keys (schedule deletion for AWS KMS)
+- [x] `KeyExist` - Check key existence
+- [x] `KeyGet` - Retrieve public keys
+- [x] `Signer` - Low-level signing interface
+
+### ✅ AWS KMS Adapter
+- [x] Environment-based configuration
+- [x] Key generation with ECC_NIST_P256 (default)
+- [x] ECDSA_SHA_256 signatures
+- [x] Key existence checking
+- [x] Public key retrieval
+- [x] Scheduled key deletion
+- [x] IAM integration
+- [x] CloudTrail audit support
+
+### ✅ Builder Pattern
+- [x] Auto-detection of available adapters
+- [x] Manual adapter configuration
+- [x] Environment-based selection
+- [x] Extensible for future adapters
+
+### ✅ Testing Infrastructure
+- [x] Unit tests for all components
+- [x] Integration tests with AWS KMS
+- [x] LocalStack support for local testing
+- [x] Mock implementations for development
+
+## 🔮 Future Adapters
+
+The architecture supports additional adapters:
+
+- **File System Storage** - For development and testing
+- **Passkey Integration** - Client-side self-custody
+- **DFNS Service** - Multi-party computation
+- **Azure Key Vault** - Microsoft cloud HSM
+- **Google Cloud KMS** - Google cloud key management
+- **Hardware Security Modules** - Direct HSM integration
+
+## 🔒 Security Considerations
+
+- **Private keys never leave secure environments** (KMS, HSM, enclaves)
+- **Minimum required permissions** via IAM policies
+- **Audit logging** through CloudTrail
+- **Environment variable validation**
+- **Secure error handling** without key material exposure
+
+## 💼 Enterprise Features
+
+### Enclave Principle
+The interfaces are designed with the assumption that private keys cannot be generated or stored outside secure enclaves.
+
+### Least Privilege Principle
+The system provides atomic 'permissions' such as `KeyRead`, `KeySign`, etc., allowing only the features actually used by the application.
+
+### Explicit Boundaries Principle
+Clear interface definitions separate provider code from user code, emphasizing responsibility boundaries.
+
+## 🤝 Contributing
+
+1. Follow the hexagonal architecture principles
+2. All comments must be in English
+3. Implement comprehensive tests for new adapters
+4. Update documentation for new features
+5. Follow existing code style and conventions
+
+## 📜 License
+
+Apache-2.0
+
+## 🏢 Enterprise Roadmap
+
+- **Multi-tenancy support** (planned)
+- **Key rotation mechanisms** (planned)  
+- **Compliance reporting** (planned)
+- **Performance monitoring** (planned)
+- **Policy engines** (planned)
+
+---
+
+## 📚 Additional Documentation
+
+- [AWS Setup Guide](README-AWS.md) - Complete AWS KMS configuration instructions
+- [Technical Documentation](doc/documentation.en.md) - Hexagonal architecture and adapter details
+- [Signature Documentation](doc/signature.en.md) - IOTA signature format specifications

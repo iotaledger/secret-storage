@@ -1,0 +1,34 @@
+[package]
+name = "aws-kms-adapter"
+version = "0.1.0"
+edition = "2021"
+authors = ["IOTA Stiftung"]
+homepage = "https://www.iota.org"
+license = "Apache-2.0"
+repository = "https://github.com/iotaledger/secret-storage"
+rust-version = "1.65"
+description = "AWS KMS adapter for secret-storage core traits"
+keywords = ["crypto", "aws", "kms", "storage", "keys"]
+
+[dependencies]
+secret-storage-core = { path = "../../core/secret-storage" }
+aws-config = "1.1"
+aws-sdk-kms = "1.15"
+aws-sdk-sts = "1.15"
+tokio = { version = "1.0", features = ["full"] }
+uuid = { version = "1.0", features = ["v4"] }
+serde = { version = "1.0", features = ["derive"] }
+base64 = "0.22"
+thiserror = "2"
+anyhow = "1"
+async-trait = "0.1"
+iota-keys = { git = "https://github.com/iotaledger/iota.git", package = "iota-keys", tag = "v1.4.1" }
+
+[features]
+default = ["send-sync-storage"]
+send-sync-storage = []
+
+[dev-dependencies]
+tokio-test = "0.4"
+hex = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
