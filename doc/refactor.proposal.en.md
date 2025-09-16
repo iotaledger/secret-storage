@@ -12,7 +12,7 @@ The repository has been reorganized following hexagonal architecture:
 
 ```
 secret-storage/
-├── core/secret-storage/              # Core domain - pure traits
+├── core/secret-storage/                             # Core domain - pure traits
 ├── adapters/aws-kms-adapter/         # AWS KMS adapter
 ├── applications/storage-factory/     # Factory pattern for adapter selection
 ├── .env.example                      # Environment variables template
@@ -27,7 +27,7 @@ secret-storage/
 
 ## Implemented Components
 
-### 1. Core Traits (core/secret-storage)
+### 1. Core Traits (core/secret-storage/)
 
 Existing traits have been moved without modifications to the core module:
 
@@ -60,11 +60,16 @@ adapters/aws-kms-adapter/
 │   ├── error.rs       # Error handling
 │   ├── signer.rs      # Signer implementation
 │   ├── storage.rs     # Storage trait implementation
-│   └── lib.rs         # Main module
+│   ├── lib.rs         # Main module
+│   └── utils/         # Modular utilities
+│       ├── aws_client.rs    # AWS client creation
+│       ├── key_utils.rs     # Key identification utilities
+│       ├── kms_operations.rs # Common KMS operations
+│       └── mod.rs           # Module exports
 ├── examples/
-│   └── basic_usage.rs # Usage example
-├── tests/
-│   └── integration.rs # Integration tests
+│   ├── key_deletion_demo.rs # Key lifecycle management
+│   ├── secp256r1_demo.rs    # Curve-specific operations
+│   └── signing_demo.rs      # Basic signing workflow
 └── Cargo.toml
 ```
 
@@ -121,8 +126,8 @@ export AWS_REGION=eu-west-1
 # Optional: Existing KMS key ID
 KMS_KEY_ID=arn:aws:kms:eu-west-1:304431203043:key/12345678-1234-1234-1234-123456789012
 
-# Optional: for testing with LocalStack
-AWS_ENDPOINT_URL=http://localhost:4566
+# Optional: Specific KMS key to use (if not generating new ones)
+# KMS_KEY_ALIAS=alias/my-existing-key
 ```
 
 ### 2. Basic Usage with AWS KMS
@@ -279,28 +284,17 @@ impl IotaKmsStorage {
 
 ## Testing
 
-### Local Testing with LocalStack
-
-To test without AWS costs:
-
-```bash
-# Start LocalStack
-docker run -p 4566:4566 localstack/localstack
-
-# Configure environment variables
-export AWS_ENDPOINT_URL=http://localhost:4566
-export AWS_ACCESS_KEY_ID=test
-export AWS_SECRET_ACCESS_KEY=test
-export AWS_REGION=us-east-1
-
-# Run tests
-cargo test --package aws-kms-adapter
-```
-
 ### Testing with Real AWS
 
 ```bash
-# Configure real AWS credentials
+# Configure AWS credentials
+export AWS_REGION=eu-west-1
+export AWS_PROFILE=your-profile-name
+
+# Run basic tests
+cargo test --package aws-kms-adapter
+
+# Run integration tests (requires real AWS KMS access)
 export RUN_INTEGRATION_TESTS=true
 cargo test --package aws-kms-adapter integration
 ```
@@ -308,21 +302,20 @@ cargo test --package aws-kms-adapter integration
 ### Running Examples
 
 ```bash
-# Basic AWS KMS example (with direct credentials)
-cargo run --package aws-kms-adapter --example basic_usage
+# Complete IOTA workflow with dynamic key generation and auto-faucet
+AWS_REGION=eu-west-1 cargo run --package storage-factory --example iota_kms_demo
 
-# Example with AWS profile
-AWS_PROFILE=your-profile-name cargo run --package aws-kms-adapter --example profile_usage
+# IOTA address generation and faucet funding
+AWS_REGION=eu-west-1 cargo run --package storage-factory --example iota_address_faucet_demo
 
-# Example for enterprise services (VM/Container)
-cargo run --package aws-kms-adapter --example enterprise_service -- container
+# AWS KMS key deletion demonstration
+cargo run --package aws-kms-adapter --example key_deletion_demo
 
-# Example with cross-account role assumption
-TARGET_ROLE_ARN="arn:aws:iam::304431203043:role/DeveloperFullAccessRole" \
-cargo run --package aws-kms-adapter --example enterprise_service -- assume-role
+# secp256r1 signature demonstration
+cargo run --package aws-kms-adapter --example secp256r1_demo
 
-# Test factory pattern
-cargo run --package storage-factory --example iota_kms_demo
+# Basic signing operations
+cargo run --package aws-kms-adapter --example signing_demo
 ```
 
 ## 🏢 Authentication Strategies for Enterprise Services

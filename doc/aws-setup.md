@@ -34,35 +34,140 @@ aws_secret_access_key = YOUR_SECRET_ACCESS_KEY_HERE
 ### 4. Test Configuration
 ```bash
 # Test AWS profile
-aws sts get-caller-identity --profile your-profile-name
+aws sts get-caller-identity --profile developer
 
 # Run IOTA examples
-AWS_REGION=eu-west-1 cargo run --package storage-factory --example iota_kms_demo
-AWS_PROFILE=your-profile-name AWS_REGION=eu-west-1 cargo run --package aws-kms-adapter --example profile_usage
+AWS_PROFILE=developer AWS_REGION=eu-west-1 cargo run --package storage-factory --example iota_kms_demo
+AWS_PROFILE=developer AWS_REGION=eu-west-1 cargo run --package storage-factory --example iota_address_faucet_demo
 ```
 
 ## Configuration Explained
 
+### AWS Profile with AssumeRole Setup
+
+#### Step 1: Create Base IAM User
+First, create an IAM user that will serve as the "source" for role assumption:
+
+1. **Create IAM User** (e.g., `iota-base-user`)
+2. **Generate Access Keys** for this user
+3. **Attach minimal policy** allowing only role assumption:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "sts:AssumeRole",
+            "Resource": "arn:aws:iam::YOUR-ACCOUNT-ID:role/DeveloperFullAccessRole"
+        }
+    ]
+}
+```
+
+#### Step 2: Create Target IAM Role
+Create the role that will have actual KMS permissions:
+
+1. **Create IAM Role** (e.g., `DeveloperFullAccessRole`)
+2. **Attach KMS policy** (see IAM Policy Requirements section below)
+3. **Configure trust policy** to allow your base user to assume it:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::YOUR-ACCOUNT-ID:user/iota-base-user"
+            },
+            "Action": "sts:AssumeRole",
+            "Condition": {
+                "StringEquals": {
+                    "sts:ExternalId": "optional-external-id"
+                }
+            }
+        }
+    ]
+}
+```
+
+#### Step 3: Configure AWS Files
+
+**~/.aws/credentials** (contains base user credentials):
+```ini
+[default]
+aws_access_key_id = AKIA... # Base user access key
+aws_secret_access_key = ... # Base user secret key
+```
+
+**~/.aws/config** (defines profile with role assumption):
+```ini
+[default]
+region = eu-west-1
+
+[profile developer]
+role_arn = arn:aws:iam::YOUR-ACCOUNT-ID:role/DeveloperFullAccessRole
+source_profile = default
+region = eu-west-1
+# external_id = optional-external-id  # If used in trust policy
+# duration_seconds = 3600             # Optional: session duration
+# role_session_name = iota-session     # Optional: custom session name
+```
+
 ### AWS Profile Flow
 1. **Base Credentials**: Stored in `[default]` profile in `~/.aws/credentials`
-2. **Role Assumption**: Your named profile assumes your specified role using base credentials
-3. **IOTA Integration**: Application uses your profile for all KMS operations
+2. **Role Assumption**: `developer` profile uses `default` credentials to assume `DeveloperFullAccessRole`
+3. **Temporary Credentials**: AWS SDK automatically gets temporary credentials with role permissions
+4. **IOTA Integration**: Application uses the `developer` profile for all KMS operations
 
 ### Environment Variables
-- `AWS_PROFILE=your-profile-name`: Tells AWS SDK to use the specified profile
+- `AWS_PROFILE=developer`: Tells AWS SDK to use the specified profile with role assumption
 - `AWS_REGION=eu-west-1`: Specifies the AWS region for KMS operations
 
 ## Alternative Configurations
 
-### Direct Role Assumption (without profiles)
+### Cross-Account Role Assumption
+For accessing KMS keys in different AWS accounts:
+
 ```bash
 # In .env file:
-TARGET_ROLE_ARN=arn:aws:iam::304431203043:role/DeveloperFullAccessRole
+TARGET_ROLE_ARN=arn:aws:iam::CROSS-ACCOUNT-ID:role/CrossAccountKMSRole
 SERVICE_NAME=iota-secret-storage-service
 AWS_REGION=eu-west-1
 
-# Run with explicit role assumption:
-cargo run --package aws-kms-adapter --example enterprise_service -- assume-role
+# The cross-account role must trust your base account and have KMS permissions
+```
+
+### Multiple Profiles for Different Environments
+You can configure multiple profiles for different environments:
+
+**~/.aws/config**:
+```ini
+[profile dev]
+role_arn = arn:aws:iam::DEV-ACCOUNT-ID:role/DeveloperRole
+source_profile = default
+region = eu-west-1
+
+[profile staging]
+role_arn = arn:aws:iam::STAGING-ACCOUNT-ID:role/StagingRole
+source_profile = default
+region = eu-west-1
+
+[profile prod]
+role_arn = arn:aws:iam::PROD-ACCOUNT-ID:role/ProductionRole
+source_profile = default
+region = eu-west-1
+mfa_serial = arn:aws:iam::BASE-ACCOUNT-ID:mfa/your-username
+```
+
+**Usage**:
+```bash
+# Development environment
+AWS_PROFILE=dev AWS_REGION=eu-west-1 cargo run --package storage-factory --example iota_kms_demo
+
+# Production environment (with MFA)
+AWS_PROFILE=prod AWS_REGION=eu-west-1 cargo run --package storage-factory --example iota_kms_demo
 ```
 
 ### Container Environments
@@ -126,17 +231,20 @@ aws kms list-keys --region eu-west-1 --profile developer
 
 ### 2. IOTA Secret Storage Tests
 ```bash
-# Basic functionality test
-cargo run --package aws-kms-adapter --example key_storage_test
+# Complete IOTA workflow with dynamic key generation and auto-faucet
+AWS_PROFILE=developer AWS_REGION=eu-west-1 cargo run --package storage-factory --example iota_kms_demo
 
-# Profile authentication test  
-cargo run --package aws-kms-adapter --example profile_usage
+# IOTA address generation and faucet funding
+AWS_PROFILE=developer AWS_REGION=eu-west-1 cargo run --package storage-factory --example iota_address_faucet_demo
 
-# Full IOTA transaction signing test
-cargo run --package storage-factory --example iota_transaction_signing
+# AWS KMS key deletion demonstration
+AWS_PROFILE=developer cargo run --package aws-kms-adapter --example key_deletion_demo
 
-# Auto-detection test
-cargo run --package storage-factory --example auto_detect_test
+# secp256r1 signature demonstration
+AWS_PROFILE=developer cargo run --package aws-kms-adapter --example secp256r1_demo
+
+# Basic signing operations
+AWS_PROFILE=developer cargo run --package aws-kms-adapter --example signing_demo
 ```
 
 ## Troubleshooting

@@ -204,15 +204,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     println!("\n🎉 Transaction successfully prepared and signed with KMS!");
 
-    // Try to submit transaction using CLI as it handles signature conversion properly
-    println!("\n🚀 Attempting to submit transaction via IOTA CLI...");
-    println!("📝 Saving transaction and signature files...");
-    println!("🔧 Running: iota client execute-signed-tx --tx-bytes <base64> --signatures <base64>");
-    // For IOTA CLI, we need to serialize the TransactionData itself, not the IntentMessage
-    let tx_data_bytes = bcs::to_bytes(&tx_data)?;
-    match submit_via_iota_cli(&tx_data_bytes, &kms_signature, &public_key_der).await {
+    // Submit transaction using IOTA SDK (recommended method)
+    println!("\n🚀 Submitting transaction via IOTA SDK...");
+    println!("📝 Converting signature to IOTA format and submitting transaction...");
+    
+    match submit_via_sdk(&iota_client, &tx_data, &kms_signature, &public_key_der).await {
         Ok(digest) => {
-            println!("✅ Transaction submitted successfully via IOTA CLI!");
+            println!("✅ Transaction submitted successfully via IOTA SDK!");
             println!("📊 Final Transaction Digest: {}", digest);
             println!(
                 "🔍 View on IOTA Explorer: https://explorer.iota.org/txblock/{}?network=testnet",
@@ -228,8 +226,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
             println!("  - Status: SUBMITTED");
         }
         Err(e) => {
-            println!("⚠️  CLI submission failed: {}", e);
-            print_manual_cli_instructions(&tx_data_bytes, &kms_signature, &public_key_der)?;
+            println!("⚠️  SDK submission failed: {}", e);
+            println!("Transaction signing was successful, but submission failed.");
+            println!("You can manually submit this transaction if needed.");
         }
     }
 

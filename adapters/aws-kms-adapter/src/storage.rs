@@ -11,7 +11,7 @@ use uuid::Uuid;
 use crate::{
     AwsKmsConfig, AwsKmsError, AwsKmsSigner,
     utils::{
-        aws_client::{create_kms_client_from_config, create_kms_client_with_profile, create_kms_client_with_role},
+        aws_client::{create_kms_client_from_config, create_kms_client_with_profile},
         key_utils::identify_key_type,
         kms_operations::{resolve_alias_to_key_id, check_key_exists_and_enabled, delete_alias_if_exists, schedule_key_deletion},
     },
@@ -44,15 +44,6 @@ impl AwsKmsStorage {
         Ok(Self { client, config })
     }
 
-    /// Create AWS KMS storage with IAM role assumption for services
-    pub async fn with_assumed_role(
-        role_arn: &str,
-        session_name: &str,
-        region: Option<&str>,
-    ) -> Result<Self> {
-        let (client, config) = create_kms_client_with_role(role_arn, session_name, region).await?;
-        Ok(Self { client, config })
-    }
 }
 
 /// Generic signature scheme for AWS KMS

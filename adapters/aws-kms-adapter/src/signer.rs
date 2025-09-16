@@ -6,6 +6,7 @@ use aws_sdk_kms::{types::SigningAlgorithmSpec, Client as KmsClient};
 use secret_storage_core::{Result, Signer};
 
 use crate::AwsKmsSignatureScheme;
+use crate::utils::key_utils::is_alias;
 
 /// AWS KMS signer implementation
 pub struct AwsKmsSigner {
@@ -17,14 +18,14 @@ pub struct AwsKmsSigner {
 
 impl AwsKmsSigner {
     /// Create new AWS KMS signer
-    /// key_identifier can be either an alias (alias/name) or a KMS key ID
+    /// key_identifier can be either an alias or a KMS key ID/ARN
     pub fn new(client: KmsClient, key_identifier: String, kms_key_id: String) -> Self {
-        // Determine if this is an alias or a KMS key ID
-        let (alias, actual_kms_key_id) = if key_identifier.starts_with("alias/") {
-            // It's an alias
+        // Determine if this is an alias or a KMS key ID/ARN
+        let (alias, actual_kms_key_id) = if is_alias(&key_identifier) {
+            // It's an alias - keep it as-is and use the resolved key ID
             (key_identifier, kms_key_id)
         } else {
-            // It's a KMS key ID, so alias is empty and we use the key_identifier as kms_key_id
+            // It's a KMS key ID or ARN, so alias is empty and we use the key_identifier as kms_key_id
             (String::new(), key_identifier)
         };
 

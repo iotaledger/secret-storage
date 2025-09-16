@@ -64,27 +64,34 @@ The complete ecosystem is organized following hexagonal architecture patterns:
 
 ```
 secret-storage-ecosystem/
-├── core/
-│   └── secret-storage/              # Core domain (existing)
-│       ├── src/
-│       └── Cargo.toml
+├── core/                            # Core domain (implemented)
+│   ├── src/
+│   └── Cargo.toml
 │
 ├── adapters/                        # Infrastructure adapters
-│   ├── aws-kms-adapter/
+│   ├── aws-kms-adapter/                # AWS KMS implementation (implemented)
 │   │   ├── src/
+│   │   │   ├── config.rs
+│   │   │   ├── storage.rs
+│   │   │   ├── signer.rs
+│   │   │   ├── error.rs
+│   │   │   └── utils/               # Modular utilities
+│   │   │       ├── aws_client.rs
+│   │   │       ├── key_utils.rs
+│   │   │       └── kms_operations.rs
 │   │   ├── Cargo.toml
-│   │   ├── examples/
-│   │   │   └── basic_usage.rs
-│   │   └── tests/
-│   │       └── integration.rs
+│   │   └── examples/
+│   │       ├── key_deletion_demo.rs
+│   │       ├── secp256r1_demo.rs
+│   │       └── signing_demo.rs
 │   │
-│   ├── filesystem-adapter/
+│   ├── filesystem-adapter/          # Local file storage (planned)
 │   │   ├── src/
 │   │   ├── Cargo.toml
 │   │   └── examples/
 │   │       └── dev_setup.rs
 │   │
-│   ├── passkey-adapter/
+│   ├── passkey-adapter/             # WebAuthn/FIDO2 integration (planned)
 │   │   ├── src/
 │   │   │   └── config.rs
 │   │   ├── Cargo.toml
@@ -93,35 +100,32 @@ secret-storage-ecosystem/
 │   │       ├── web_demo.html
 │   │       └── mobile_integration.rs
 │   │
-│   └── dfns-adapter/
+│   └── dfns-adapter/                # MPC service integration (planned)
 │       ├── src/
 │       ├── Cargo.toml
 │       └── examples/
 │           └── enterprise_setup.rs
 │
 ├── applications/                    # Application layer
-│   ├── iota-identity-integration/
-│   │   ├── src/
-│   │   │   ├── lib.rs
-│   │   │   ├── identity_manager.rs  # Use case: DID management
-│   │   │   ├── credential_issuer.rs # Use case: VC issuance
-│   │   │   └── storage_factory.rs   # Factory: adapter selection
-│   │   └── Cargo.toml
-│   │
-│   └── cli-tool/
+│   └──  storage-factory/             # Factory pattern implementation (implemented)
 │       ├── src/
-│       │   ├── main.rs
-│       │   ├── commands/
-│       │   │   ├── generate.rs      # Command: key generation
-│       │   │   ├── sign.rs          # Command: signing operations
-│       │   │   └── configure.rs     # Command: adapter setup
-│       │   └── config/
-│       │       └── settings.rs
+│       │   ├── lib.rs
+│       │   ├── builder.rs           # Builder pattern for adapter selection
+│       │   └── error.rs             # Application error types
+│       ├── examples/
+│       │   ├── iota_kms_demo.rs     # Complete IOTA workflow
+│       │   ├── iota_address_faucet_demo.rs
+│       │   └── utils/               # Shared utilities
+│       │       ├── crypto.rs        # IOTA crypto operations
+│       │       ├── faucet.rs        # Auto-faucet functionality
+│       │       ├── iota_client.rs   # IOTA CLI integration
+│       │       └── key_generation.rs
 │       └── Cargo.toml
+│  
 │
-├── bindings/                        # Language bindings
-│   └── wasm/
-└──
+└──bindings/                        # Language bindings
+    └── wasm/
+
 ```
 
 ### 2.4 Implementation Strategy
@@ -150,7 +154,7 @@ Each concrete adapter focuses on specific enterprise requirements while maintain
 ```rust
 pub struct AwsKmsStorage {
     kms_client: aws_sdk_kms::Client,
-    key_spec: KeySpec, // Ed25519 via CloudHSM for IOTA compatibility
+    key_spec: KeySpec, // secp256r1 (P-256) for IOTA compatibility
     region: String,
 }
 
@@ -319,23 +323,26 @@ pub struct DfnsStorage {
 
 ## 5. Implementation Roadmap
 
-### 5.1 Phase 1: Core Infrastructure
-- [ ] Implement trait-based storage layer in Rust
-- [ ] Create WASM bindings for web integration
-- [ ] Develop AWS KMS concrete implementation
-- [ ] Build file system storage for development
+### 5.1 Phase 1: Core Infrastructure ✅
+- [x] Implement trait-based storage layer in Rust
+- [x] Develop AWS KMS concrete implementation with secp256r1 support
+- [x] Build storage factory with builder pattern
+- [x] Create comprehensive examples and documentation
+- [ ] Create WASM bindings for web integration (planned)
+- [ ] Build file system storage for development (planned)
 
-### 5.2 Phase 2: Advanced Integrations  
-- [ ] Implement passkey storage with WebAuthn
-- [ ] Integrate DFNS or similar MPC service
-- [ ] Create policy engine for enterprise governance
-- [ ] Develop monitoring and audit capabilities
+### 5.2 Phase 2: Advanced Integrations 🚧 
+- [ ] Implement passkey storage with WebAuthn (planned)
+- [ ] Integrate DFNS or similar MPC service (planned)
+- [ ] Create policy engine for enterprise governance (planned)
+- [ ] Develop monitoring and audit capabilities (planned)
+- [x] Complete IOTA blockchain integration with transaction workflow
+- [x] Implement signature canonicalization for ECDSA compliance
 
-### 5.3 Phase 3: Enterprise Features
-- [ ] Multi-tenancy support
+### 5.3 Phase 3: Enterprise Features 📋
 - [ ] Advanced key rotation mechanisms
 - [ ] Compliance reporting tools
-- [ ] Performance optimization and caching
+- [x] Modular utilities architecture for maintainable code
 
 ## 6. Integration Benefits
 

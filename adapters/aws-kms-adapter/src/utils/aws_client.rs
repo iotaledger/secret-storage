@@ -42,21 +42,3 @@ pub async fn create_kms_client_with_profile(profile_name: Option<&str>) -> Resul
     Ok((client, config))
 }
 
-/// Create KMS client with IAM role assumption (placeholder for future implementation)
-pub async fn create_kms_client_with_role(
-    _role_arn: &str,
-    _session_name: &str,
-    region: Option<&str>,
-) -> Result<(KmsClient, AwsKmsConfig)> {
-    // TODO: Implement actual role assumption with STS
-    
-    let final_region = region.unwrap_or("eu-west-1").to_string();
-    let aws_config = aws_config::defaults(aws_config::BehaviorVersion::latest())
-        .region(aws_config::Region::new(final_region.clone()))
-        .load()
-        .await;
-    let client = KmsClient::new(&aws_config);
-    let config = AwsKmsConfig::new(final_region);
-    
-    Ok((client, config))
-}

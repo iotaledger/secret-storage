@@ -3,11 +3,14 @@
 
 //! Common KMS operations and utilities
 
-use aws_sdk_kms::{Client as KmsClient, types::KeyState};
 use crate::AwsKmsError;
+use aws_sdk_kms::{types::KeyState, Client as KmsClient};
 
 /// Resolve an alias to the actual KMS key ID
-pub async fn resolve_alias_to_key_id(client: &KmsClient, alias: &str) -> Result<String, AwsKmsError> {
+pub async fn resolve_alias_to_key_id(
+    client: &KmsClient,
+    alias: &str,
+) -> Result<String, AwsKmsError> {
     let describe_response = client
         .describe_key()
         .key_id(alias)
@@ -22,7 +25,10 @@ pub async fn resolve_alias_to_key_id(client: &KmsClient, alias: &str) -> Result<
 }
 
 /// Check if a key exists and is in a valid state
-pub async fn check_key_exists_and_enabled(client: &KmsClient, key_id: &str) -> Result<bool, AwsKmsError> {
+pub async fn check_key_exists_and_enabled(
+    client: &KmsClient,
+    key_id: &str,
+) -> Result<bool, AwsKmsError> {
     match client.describe_key().key_id(key_id).send().await {
         Ok(response) => {
             if let Some(metadata) = response.key_metadata {
@@ -64,19 +70,4 @@ pub async fn schedule_key_deletion(
         .map_err(|e| AwsKmsError::General(format!("Failed to schedule key deletion: {}", e)))?;
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_pending_days_default() {
-        // Test that default pending days is 7 when None is provided
-        let days = None.unwrap_or(7);
-        assert_eq!(days, 7);
-
-        let days = Some(14).unwrap_or(7);
-        assert_eq!(days, 14);
-    }
 }
