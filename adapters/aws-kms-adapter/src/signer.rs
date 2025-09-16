@@ -43,6 +43,16 @@ impl AwsKmsSigner {
         self.signing_algorithm = algorithm;
         self
     }
+
+    /// Get the appropriate key identifier for AWS KMS API calls
+    /// Adds 'alias/' prefix for user aliases as required by AWS API
+    fn get_api_key_id(&self) -> String {
+        if !self.alias.is_empty() {
+            format!("alias/{}", self.alias)
+        } else {
+            self.kms_key_id.clone()
+        }
+    }
 }
 
 #[cfg_attr(not(feature = "send-sync-storage"), async_trait(?Send))]
@@ -51,19 +61,14 @@ impl Signer<AwsKmsSignatureScheme> for AwsKmsSigner {
     type KeyId = String;
 
     async fn sign(&self, data: &Vec<u8>) -> Result<Vec<u8>> {
-
-        // Use the most appropriate key identifier (prefer alias if available)
-        let key_id = if !self.alias.is_empty() {
-            &self.alias
-        } else {
-            &self.kms_key_id
-        };
+        // Get the appropriate key identifier for AWS KMS API
+        let key_id = self.get_api_key_id();
 
         // Perform AWS KMS signing operation
         let sign_response = self
             .client
             .sign()
-            .key_id(key_id)
+            .key_id(&key_id)
             .message(aws_sdk_kms::primitives::Blob::new(data.clone()))
             .message_type(aws_sdk_kms::types::MessageType::Raw)
             .signing_algorithm(self.signing_algorithm.clone())
@@ -90,19 +95,14 @@ impl Signer<AwsKmsSignatureScheme> for AwsKmsSigner {
     }
 
     async fn public_key(&self) -> Result<Vec<u8>> {
-
-        // Use the most appropriate key identifier (prefer alias if available)
-        let key_id = if !self.alias.is_empty() {
-            &self.alias
-        } else {
-            &self.kms_key_id
-        };
+        // Get the appropriate key identifier for AWS KMS API
+        let key_id = self.get_api_key_id();
 
         // Get public key from AWS KMS
         let public_key_response = self
             .client
             .get_public_key()
-            .key_id(key_id)
+            .key_id(&key_id)
             .send()
             .await
             .map_err(|e| {

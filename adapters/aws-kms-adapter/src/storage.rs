@@ -12,7 +12,7 @@ use crate::{
     AwsKmsConfig, AwsKmsError, AwsKmsSigner,
     utils::{
         aws_client::{create_kms_client_from_config, create_kms_client_with_profile},
-        key_utils::identify_key_type,
+        key_utils::{identify_key_type, is_alias},
         kms_operations::{resolve_alias_to_key_id, check_key_exists_and_enabled, delete_alias_if_exists, schedule_key_deletion},
     },
 };
@@ -130,16 +130,12 @@ impl KeyGenerate<AwsKmsSignatureScheme, String> for AwsKmsStorage {
             .map(|metadata| metadata.key_id)
             .ok_or_else(|| AwsKmsError::General("No key ID returned from KMS".to_string()))?;
 
-        // Create the alias for the key
-        let normalized_alias = if key_alias.starts_with("alias/") {
-            key_alias.clone()
-        } else {
-            format!("alias/{}", key_alias)
-        };
+        // Create the alias for the key (AWS requires 'alias/' prefix)
+        let aws_alias_name = format!("alias/{}", key_alias);
 
         self.client
             .create_alias()
-            .alias_name(&normalized_alias)
+            .alias_name(&aws_alias_name)
             .target_key_id(&kms_key_id)
             .send()
             .await
@@ -149,7 +145,7 @@ impl KeyGenerate<AwsKmsSignatureScheme, String> for AwsKmsStorage {
         let public_key_response = self
             .client
             .get_public_key()
-            .key_id(&normalized_alias)
+            .key_id(&aws_alias_name)
             .send()
             .await
             .map_err(|e| AwsKmsError::General(format!("Failed to get public key: {}", e)))?;
@@ -159,8 +155,8 @@ impl KeyGenerate<AwsKmsSignatureScheme, String> for AwsKmsStorage {
             .ok_or_else(|| AwsKmsError::General("No public key returned from KMS".to_string()))?
             .into_inner();
 
-        // Return the alias as the key identifier (no internal mapping needed)
-        Ok((normalized_alias, public_key_der))
+        // Return the original alias as the key identifier (without 'alias/' prefix for user display)
+        Ok((key_alias, public_key_der))
     }
 }
 
@@ -184,18 +180,25 @@ impl KeySign<AwsKmsSignatureScheme, String> for AwsKmsStorage {
 #[cfg_attr(feature = "send-sync-storage", async_trait)]
 impl KeyDelete<String> for AwsKmsStorage {
     async fn delete(&self, key_id: &String) -> Result<()> {
-        let is_alias = key_id.starts_with("alias/");
+        let is_key_alias = is_alias(key_id);
+
+        // For AWS API calls, aliases need 'alias/' prefix
+        let api_key_id = if is_key_alias {
+            format!("alias/{}", key_id)
+        } else {
+            key_id.clone()
+        };
 
         // Get the actual KMS key ID for deletion
-        let actual_key_id = if is_alias {
-            resolve_alias_to_key_id(&self.client, key_id).await?
+        let actual_key_id = if is_key_alias {
+            resolve_alias_to_key_id(&self.client, &api_key_id).await?
         } else {
             key_id.clone()
         };
 
         // Step 1: If we started with an alias, delete the alias first
-        if is_alias {
-            delete_alias_if_exists(&self.client, key_id).await?;
+        if is_key_alias {
+            delete_alias_if_exists(&self.client, &api_key_id).await?;
         }
 
         // Step 2: Schedule the KMS key for deletion
