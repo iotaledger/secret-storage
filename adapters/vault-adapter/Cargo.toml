@@ -1,0 +1,35 @@
+[package]
+name = "vault-adapter"
+version = "0.1.0"
+edition = "2021"
+authors = ["IOTA Stiftung"]
+homepage = "https://www.iota.org"
+license = "Apache-2.0"
+repository = "https://github.com/iotaledger/secret-storage"
+rust-version = "1.65"
+description = "HashiCorp Vault adapter for secret-storage core traits"
+keywords = ["crypto", "vault", "hashicorp", "storage", "keys"]
+
+[dependencies]
+secret-storage-core = { path = "../../core/secret-storage" }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+uuid = { version = "1.0", features = ["v4"] }
+base64 = "0.22"
+thiserror = "2"
+anyhow = "1"
+async-trait = "0.1"
+iota-keys = { git = "https://github.com/iotaledger/iota.git", package = "iota-keys", tag = "v1.4.1" }
+p256 = { version = "0.13", features = ["ecdsa", "pem"] }
+sha2 = "0.10"
+
+[features]
+default = ["send-sync-storage"]
+send-sync-storage = []
+
+[dev-dependencies]
+tokio-test = "0.4"
+hex = "0.4"
+chrono = { version = "0.4", features = ["serde"] }

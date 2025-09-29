@@ -19,6 +19,14 @@
 //!         .build_aws_kms()
 //!         .await?;
 //!
+//!     // HashiCorp Vault configuration
+//!     let vault_storage = StorageBuilder::new()
+//!         .vault()
+//!         .with_vault_addr("http://localhost:8200".to_string())
+//!         .with_vault_token("dev-token".to_string())
+//!         .build_vault()
+//!         .await?;
+//!
 //!     // Future: Passkey adapter
 //!     // let passkey_storage = StorageBuilder::new()
 //!     //     .passkey()

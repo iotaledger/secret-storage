@@ -13,6 +13,7 @@ keywords = ["crypto", "storage", "factory", "builder", "adapter"]
 [dependencies]
 secret-storage-core = { path = "../../core/secret-storage" }
 aws-kms-adapter = { path = "../../adapters/aws-kms-adapter", optional = true }
+vault-adapter = { path = "../../adapters/vault-adapter", optional = true }
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "2"
 anyhow = "1"
@@ -42,3 +43,4 @@ hex = "0.4"
 [features]
 default = ["aws-kms"]
 aws-kms = ["dep:aws-kms-adapter"]
+vault = ["dep:vault-adapter"]
