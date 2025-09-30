@@ -26,12 +26,12 @@
 //! export VAULT_MOUNT_PATH="transit"
 //!
 //! # Run the example
-//! cargo run --package vault-adapter --example basic_usage
+//! VAULT_ADDR=http://localhost:8200 VAULT_TOKEN=dev-token VAULT_MOUNT_PATH="transit" cargo run --package vault-adapter --example basic_usage
 //! ```
 
-use vault_adapter::{VaultKeyOptions, VaultStorage};
-use secret_storage_core::{KeyGenerate, KeyGet, KeySign, KeyDelete, Signer};
+use secret_storage_core::{KeyDelete, KeyGenerate, KeyGet, KeySign, Signer};
 use std::env;
+use vault_adapter::{VaultKeyOptions, VaultStorage};
 
 fn print_session_header() {
     let session_id = chrono::Utc::now().timestamp_millis();
@@ -51,17 +51,15 @@ fn print_step(step: u8, title: &str) {
 
 async fn create_storage() -> Result<VaultStorage, Box<dyn std::error::Error>> {
     print_step(1, "Initialize Vault Storage");
-    
+
     println!("🔑 Using environment variable authentication");
     let storage = VaultStorage::from_env().await?;
-    
+
     println!("✅ Vault storage initialized successfully");
     Ok(storage)
 }
 
-async fn generate_key(
-    storage: &VaultStorage,
-) -> Result<String, Box<dyn std::error::Error>> {
+async fn generate_key(storage: &VaultStorage) -> Result<String, Box<dyn std::error::Error>> {
     print_step(2, "Generate Signing Key");
 
     let session_id = chrono::Utc::now().timestamp_millis();
@@ -197,7 +195,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🔐 Security Notes:");
     println!("  • Private keys never leave Vault's secure storage");
     println!("  • All signing operations are performed within Vault");
-    println!("  • Signatures are generated using ECDSA with SHA-256");
+    println!("  • Signatures are generated using ECDSA with P-256 curve");
     println!("  • Full audit trail available through Vault audit logs");
 
     Ok(())

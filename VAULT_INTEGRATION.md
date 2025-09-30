@@ -51,7 +51,7 @@ cargo run --package vault-adapter --example basic_usage
 cargo run --package vault-adapter --example signing_demo
 
 # End-to-end IOTA transaction demo
-cargo run --package storage-factory --example iota_vault_demo --features vault
+cargo run --package storage-factory --example iota_vault_demo
 ```
 
 ### 3. Use in Your Code
@@ -184,8 +184,8 @@ docker-compose -f docker-compose.vault.yml down
 # Test Vault adapter
 cargo test --package vault-adapter
 
-# Test with features
-cargo test --package storage-factory --features vault
+# Test storage factory (includes all adapters)
+cargo test --package storage-factory
 ```
 
 ### **Integration Tests**
@@ -196,7 +196,7 @@ cargo test --package storage-factory --features vault
 # Run integration examples
 cargo run --package vault-adapter --example basic_usage
 cargo run --package vault-adapter --example signing_demo
-cargo run --package storage-factory --example iota_vault_demo --features vault
+cargo run --package storage-factory --example iota_vault_demo
 ```
 
 ## 🚀 Production Deployment

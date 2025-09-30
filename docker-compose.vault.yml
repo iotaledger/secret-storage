@@ -5,7 +5,7 @@
 # Docker Compose configuration for HashiCorp Vault development environment
 #
 # This setup provides:
-# - Vault server in development mode
+# - HashiCorp Vault 1.20 server in development mode
 # - Transit secrets engine pre-enabled
 # - UI available at http://localhost:8200/ui
 # - Root token: dev-token
@@ -20,11 +20,9 @@
 #   export VAULT_MOUNT_PATH="transit"
 #
 
-version: '3.8'
-
 services:
   vault:
-    image: vault:1.15
+    image: hashicorp/vault:1.20
     container_name: iota-vault-dev
     restart: unless-stopped
     ports:
@@ -33,6 +31,8 @@ services:
       VAULT_DEV_ROOT_TOKEN_ID: dev-token
       VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
       VAULT_UI: true
+      VAULT_ADDR: http://0.0.0.0:8200
+      VAULT_TOKEN: dev-token
     cap_add:
       - IPC_LOCK
     healthcheck:
@@ -53,7 +53,7 @@ services:
 
   # Service to automatically enable transit engine
   vault-init:
-    image: vault:1.15
+    image: hashicorp/vault:1.20
     container_name: iota-vault-init
     depends_on:
       vault:

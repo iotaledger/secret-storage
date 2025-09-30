@@ -41,6 +41,6 @@ base64 = "0.21"
 hex = "0.4"
 
 [features]
-default = ["aws-kms"]
+default = ["aws-kms", "vault"]
 aws-kms = ["dep:aws-kms-adapter"]
 vault = ["dep:vault-adapter"]

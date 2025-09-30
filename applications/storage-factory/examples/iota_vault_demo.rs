@@ -18,7 +18,7 @@
 //! export VAULT_ADDR="http://localhost:8200"
 //! export VAULT_TOKEN="dev-token"
 //! export VAULT_MOUNT_PATH="transit"
-//! cargo run --package storage-factory --example iota_vault_demo
+//! VAULT_ADDR=http://localhost:8200 VAULT_TOKEN=dev-token VAULT_MOUNT_PATH="transit" cargo run --package storage-factory --example iota_vault_demo
 //! ```
 
 mod utils;
@@ -61,7 +61,7 @@ async fn generate_dynamic_vault_key(
         key_name: Some(key_name),
         description: Some("IOTA Vault Demo Key - ECDSA P-256".to_string()),
     };
-    
+
     // Generate key with specified name
     let (key_id, public_key) = storage.generate_key_with_options(options).await?;
     Ok((key_id, public_key))
@@ -76,7 +76,10 @@ fn print_session_header() {
     println!("🚀 IOTA Vault Demo - Send 0.005 IOTA Transaction");
     println!("================================================");
     println!("📅 Session ID: VAULT_DEMO_{}", session_id);
-    println!("🔧 Vault Address: {}", std::env::var("VAULT_ADDR").unwrap_or_else(|_| "http://localhost:8200".to_string()));
+    println!(
+        "🔧 Vault Address: {}",
+        std::env::var("VAULT_ADDR").unwrap_or_else(|_| "http://localhost:8200".to_string())
+    );
     println!("🏦 Storage Backend: HashiCorp Vault");
     println!("🌐 Network: IOTA Testnet");
     println!("💰 Transfer Amount: 0.005 IOTA");
@@ -90,13 +93,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Initialize Vault storage
     println!("\n🔧 Initializing HashiCorp Vault storage...");
     println!("   🔍 Checking Vault connection and authentication...");
-    
+
     let storage = StorageBuilder::new()
         .vault()
         .build_vault()
         .await
         .map_err(|e| format!("Failed to initialize Vault storage: {}\n\nTroubleshooting:\n• Ensure Vault server is running: ./scripts/vault-dev.sh start\n• Check VAULT_ADDR environment variable\n• Verify VAULT_TOKEN is valid\n• Ensure Transit engine is enabled", e))?;
-    
+
     println!("✅ HashiCorp Vault storage initialized");
     println!("   🔐 Connected to Vault Transit secrets engine");
 
@@ -105,12 +108,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let key_name = generate_key_name();
     println!("🔑 Generating new ECDSA P-256 key...");
     println!("   Key name: {}", key_name);
-    
+
     let (key_id, public_key_der) = generate_dynamic_vault_key(&storage, key_name).await?;
-    
+
     println!("✅ Key generated successfully in Vault");
     println!("   📌 Key ID: {}", key_id);
-    println!("   📐 Public key size: {} bytes (DER format)", public_key_der.len());
+    println!(
+        "   📐 Public key size: {} bytes (DER format)",
+        public_key_der.len()
+    );
     println!("   🔒 Key type: ECDSA P-256 (secp256r1)");
 
     // Convert DER to IOTA address
@@ -134,13 +140,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
         iota_address
     );
     println!("💧 Sending faucet request...");
-    println!("   📝 Note: Faucet provides ~1 IOTA for testing purposes");
-    
+    println!("   📝 Note: Faucet provides ~10 IOTA for testing purposes");
+
     match request_faucet_funds(iota_address).await {
         Ok(response) => {
             println!("✅ Faucet request successful");
             println!("   📨 Response: {}", response);
-        },
+        }
         Err(e) => {
             println!("⚠️  Faucet request failed: {}", e);
             println!("   🔄 Continuing to check existing balance...");
@@ -171,7 +177,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let gas_buffer = 10_000_000; // 0.01 IOTA buffer for gas
     let required_balance = TRANSFER_AMOUNT + gas_buffer;
-    
+
     if total_balance < required_balance {
         return Err(format!(
             "❌ Insufficient balance for transaction\n   Required: {} MIST ({:.6} IOTA) including gas buffer\n   Available: {} MIST ({:.6} IOTA)\n   Transfer: {} MIST ({:.6} IOTA)\n   Gas buffer: {} MIST ({:.6} IOTA)",
@@ -187,7 +193,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!("📤 Transaction Details:");
     println!("   From: {}", iota_address);
     println!("   To: {}", TARGET_ADDRESS);
-    println!("   Amount: {} MIST ({:.6} IOTA)", TRANSFER_AMOUNT, TRANSFER_AMOUNT as f64 / 1_000_000_000.0);
+    println!(
+        "   Amount: {} MIST ({:.6} IOTA)",
+        TRANSFER_AMOUNT,
+        TRANSFER_AMOUNT as f64 / 1_000_000_000.0
+    );
 
     // Parse target address
     let recipient_address: IotaAddress = TARGET_ADDRESS.parse()?;
@@ -241,30 +251,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Sign with Vault
     println!("\n🔐 Signing transaction with HashiCorp Vault...");
     println!("   🔑 Using key: {}", key_id);
-    println!("   🏗️ Vault will perform ECDSA signing with internal SHA-256 hashing");
-    
+    println!("   📝 Signer will automatically determine correct data format");
+
     let signer = storage.get_signer(&key_id)?;
+    // For Ed25519 in IOTA, we need to pass the Blake2b-256 digest, not raw data
+    // This matches IOTA's expectation that Ed25519 signs the Blake2b-256 hash
     let vault_signature = signer.sign(&digest.to_vec()).await?;
-    
+
     println!("✅ Transaction signed successfully with Vault");
     println!("   📏 Signature size: {} bytes", vault_signature.len());
     println!("   📊 Signature (hex): {}", hex::encode(&vault_signature));
     println!("   🔒 Signature format: DER-encoded ECDSA");
 
-    // Convert DER signature components for IOTA submission
-    println!("\n📦 Processing signature for IOTA submission...");
-    let (r_bytes, s_bytes) = parse_der_signature(&vault_signature)?;
-    println!("✅ DER signature parsed successfully");
-    println!("   📐 R component: {} bytes", r_bytes.len());
-    println!("   📐 S component: {} bytes", s_bytes.len());
-
-    // Extract and process public key
-    println!("\n🔑 Processing public key for submission...");
-    let raw_public_key = extract_raw_public_key_from_der(&public_key_der)?;
-    let compressed_public_key = compress_public_key(&raw_public_key)?;
-    println!("✅ Public key processed");
-    println!("   📏 Raw key size: {} bytes", raw_public_key.len());
-    println!("   📏 Compressed key size: {} bytes", compressed_public_key.len());
+    // Process signature for IOTA submission
+    // Signature and public key processing is now handled automatically
+    // in submit_via_sdk based on the key type (ECDSA vs Ed25519)
 
     // Display comprehensive transaction information
     println!("\n📊 COMPLETE TRANSACTION INFORMATION");
@@ -273,38 +274,51 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!("🔑 Key ID: {}", key_id);
     println!("🏠 From Address: {}", iota_address);
     println!("🎯 To Address: {}", TARGET_ADDRESS);
-    println!("💰 Amount: {} MIST ({:.6} IOTA)", TRANSFER_AMOUNT, TRANSFER_AMOUNT as f64 / 1_000_000_000.0);
+    println!(
+        "💰 Amount: {} MIST ({:.6} IOTA)",
+        TRANSFER_AMOUNT,
+        TRANSFER_AMOUNT as f64 / 1_000_000_000.0
+    );
     println!("⛽ Gas Budget: {} MIST", gas_budget);
     println!("💲 Gas Price: {} MIST/unit", gas_price);
     println!("");
     println!("🔐 CRYPTOGRAPHIC DATA:");
     println!("   Transaction Digest: {}", hex::encode(&digest));
-    println!("   Vault Signature (DER): {}", hex::encode(&vault_signature));
-    println!("   R Component: {}", hex::encode(&r_bytes));
-    println!("   S Component: {}", hex::encode(&s_bytes));
-    println!("   Public Key (Raw): {}", hex::encode(&raw_public_key));
-    println!("   Public Key (Compressed): {}", hex::encode(&compressed_public_key));
+    println!(
+        "   Vault Signature: {} ({} bytes)",
+        hex::encode(&vault_signature),
+        vault_signature.len()
+    );
 
     // Submit transaction using IOTA SDK
     println!("\n🚀 SUBMITTING TRANSACTION TO IOTA TESTNET");
     println!("{}", "=".repeat(50));
     println!("📝 Converting Vault signature to IOTA format...");
-    println!("📡 Submitting via IOTA SDK...");
     
+    // Process signature and submit to IOTA
+    println!("📡 Submitting via IOTA SDK...");
+
     match submit_via_sdk(&iota_client, &tx_data, &vault_signature, &public_key_der).await {
         Ok(digest) => {
             println!("\n🎉 TRANSACTION SUCCESSFUL!");
             println!("{}", "=".repeat(50));
             println!("✅ Transaction submitted successfully to IOTA testnet");
             println!("📊 Final Transaction Digest: {}", digest);
-            println!("🔍 Explorer URL: https://explorer.iota.org/txblock/{}?network=testnet", digest);
+            println!(
+                "🔍 Explorer URL: https://explorer.iota.org/txblock/{}?network=testnet",
+                digest
+            );
             println!("");
             println!("📋 TRANSACTION SUMMARY:");
             println!("   🏦 Backend: HashiCorp Vault");
             println!("   🔑 Key: {}", key_id);
             println!("   🏠 From: {}", iota_address);
             println!("   🎯 To: {}", TARGET_ADDRESS);
-            println!("   💰 Amount: {} MIST ({:.6} IOTA)", TRANSFER_AMOUNT, TRANSFER_AMOUNT as f64 / 1_000_000_000.0);
+            println!(
+                "   💰 Amount: {} MIST ({:.6} IOTA)",
+                TRANSFER_AMOUNT,
+                TRANSFER_AMOUNT as f64 / 1_000_000_000.0
+            );
             println!("   🌐 Network: IOTA Testnet");
             println!("   ✅ Status: SUBMITTED");
             println!("");
@@ -331,7 +345,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             println!("• Try again in a few seconds");
             println!("");
             println!("💡 The signature is valid and can be used for manual submission");
-            
+
             return Err(format!("Transaction submission failed: {}", e).into());
         }
     }

@@ -25,13 +25,13 @@
 //! export VAULT_MOUNT_PATH="transit"
 //!
 //! # Run the demo
-//! cargo run --package vault-adapter --example signing_demo
+//! VAULT_ADDR=http://localhost:8200 VAULT_TOKEN=dev-token VAULT_MOUNT_PATH="transit" cargo run --package vault-adapter --example signing_demo
 //! ```
 
-use vault_adapter::{VaultKeyOptions, VaultStorage};
-use secret_storage_core::{KeyGenerate, KeySign, KeyExist, KeyDelete, Signer};
+use secret_storage_core::{KeyDelete, KeyExist, KeyGenerate, KeySign, Signer};
 use std::env;
 use std::time::Instant;
+use vault_adapter::{VaultKeyOptions, VaultStorage};
 
 fn print_session_header() {
     let session_id = chrono::Utc::now().timestamp_millis();
@@ -51,7 +51,7 @@ fn print_step(step: u8, title: &str) {
 
 async fn create_storage() -> Result<VaultStorage, Box<dyn std::error::Error>> {
     print_step(1, "Initialize Vault Storage");
-    
+
     let storage = VaultStorage::from_env().await?;
     println!("✅ Vault storage initialized successfully");
     Ok(storage)
@@ -68,7 +68,7 @@ async fn generate_multiple_keys(
     // Generate 3 different keys for testing
     for i in 1..=3 {
         let key_name = format!("signing-demo-{}-key-{}", session_id, i);
-        
+
         println!("📝 Creating key #{}: {}", i, key_name);
 
         let options = VaultKeyOptions {
@@ -97,7 +97,7 @@ async fn test_key_existence(
     for key_id in key_ids {
         println!("🔍 Checking existence of key: {}", key_id);
         let exists = storage.exist(key_id).await?;
-        
+
         if exists {
             println!("   ✅ Key exists");
         } else {
@@ -109,7 +109,7 @@ async fn test_key_existence(
     let fake_key = "non-existent-key-12345";
     println!("🔍 Checking non-existent key: {}", fake_key);
     let exists = storage.exist(&fake_key.to_string()).await?;
-    
+
     if !exists {
         println!("   ✅ Correctly identified non-existent key");
     } else {
@@ -130,22 +130,25 @@ async fn comprehensive_signing_test(
         ("Empty data", vec![]),
         ("Short message", "Hello Vault!".as_bytes().to_vec()),
         ("Unicode text", "🔐 IOTA 🌍 世界".as_bytes().to_vec()),
-        ("Binary data", vec![0x00, 0x01, 0x02, 0x03, 0xFF, 0xFE, 0xFD]),
+        (
+            "Binary data",
+            vec![0x00, 0x01, 0x02, 0x03, 0xFF, 0xFE, 0xFD],
+        ),
         ("Large data", vec![0x42; 1024]), // 1KB of 0x42
         ("Hash-like data", (0..32).map(|i| i as u8).collect()), // 32 bytes sequential
     ];
 
     for (i, key_id) in key_ids.iter().enumerate() {
         println!("\n🔑 Testing with Key #{}: {}", i + 1, key_id);
-        
+
         let key_string = key_id.to_string();
-    let signer = storage.get_signer(&key_string)?;
+        let signer = storage.get_signer(&key_string)?;
         println!("   📝 Signer created for key: {}", signer.key_id());
 
         for (desc, data) in &test_data {
             println!("\n   🔐 Signing: {}", desc);
             println!("      📏 Data size: {} bytes", data.len());
-            
+
             if data.len() <= 20 && data.iter().all(|&b| b.is_ascii_graphic() || b == b' ') {
                 println!("      📄 Content: \"{}\"", String::from_utf8_lossy(data));
             } else if data.len() <= 20 {
@@ -160,7 +163,7 @@ async fn comprehensive_signing_test(
 
             println!("      ✅ Signed in {:?}", duration);
             println!("      📏 Signature size: {} bytes", signature.len());
-            
+
             if signature.is_empty() {
                 return Err("Generated signature is empty!".into());
             }
@@ -178,10 +181,15 @@ async fn performance_test(
 
     let key_string = key_id.to_string();
     let signer = storage.get_signer(&key_string)?;
-    let test_message = "Performance test message for IOTA Vault adapter".as_bytes().to_vec();
-    
+    let test_message = "Performance test message for IOTA Vault adapter"
+        .as_bytes()
+        .to_vec();
+
     println!("🚀 Running performance test with key: {}", key_id);
-    println!("   📄 Test message: \"{}\"", String::from_utf8_lossy(&test_message));
+    println!(
+        "   📄 Test message: \"{}\"",
+        String::from_utf8_lossy(&test_message)
+    );
     println!("   📏 Message size: {} bytes", test_message.len());
 
     let num_signatures = 5;
@@ -193,9 +201,9 @@ async fn performance_test(
         let start = Instant::now();
         let signature = signer.sign(&test_message).await?;
         let duration = start.elapsed();
-        
+
         durations.push(duration);
-        
+
         println!("      #{}: {:?} ({} bytes)", i, duration, signature.len());
     }
 
@@ -210,8 +218,10 @@ async fn performance_test(
     println!("      📈 Average: {:?}", avg_time);
     println!("      ⚡ Fastest: {:?}", min_time);
     println!("      🐌 Slowest: {:?}", max_time);
-    println!("      🎯 Throughput: {:.2} signatures/sec", 
-             num_signatures as f64 / total_time.as_secs_f64());
+    println!(
+        "      🎯 Throughput: {:.2} signatures/sec",
+        num_signatures as f64 / total_time.as_secs_f64()
+    );
 
     Ok(())
 }
@@ -275,7 +285,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🔐 Security Highlights:");
     println!("  • Private keys secured within Vault's encryption boundary");
     println!("  • ECDSA P-256 cryptographic strength");
-    println!("  • SHA-256 hashing for data integrity");
+    println!("  • Direct signing of pre-hashed data");
     println!("  • Audit trail through Vault's logging system");
 
     Ok(())

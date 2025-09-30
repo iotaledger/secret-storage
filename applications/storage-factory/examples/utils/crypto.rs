@@ -14,19 +14,25 @@ pub fn derive_iota_address_from_der(der_bytes: &[u8]) -> Result<IotaAddress, Box
     // Extract raw public key from DER format
     let raw_pubkey = extract_raw_public_key_from_der(der_bytes)?;
 
-    // AWS KMS uses secp256r1 (P-256)
-    // The raw public key should be 65 bytes: 0x04 + 32 bytes X + 32 bytes Y
-    if raw_pubkey.len() != 65 || raw_pubkey[0] != 0x04 {
-        return Err("Invalid public key format - expected uncompressed secp256r1".into());
-    }
-
-    // IOTA address derivation: hash [flag || compressed_pubkey] with Blake2b-256
-    // For secp256r1, flag = 0x02
-    let compressed_pubkey = compress_public_key(&raw_pubkey)?;
-
     let mut pubkey_with_flag = Vec::new();
-    pubkey_with_flag.push(0x02); // secp256r1 flag
-    pubkey_with_flag.extend_from_slice(&compressed_pubkey);
+
+    if raw_pubkey.len() == 65 && raw_pubkey[0] == 0x04 {
+        // ECDSA secp256r1 (P-256) case
+        // The raw public key is 65 bytes: 0x04 + 32 bytes X + 32 bytes Y
+        let compressed_pubkey = compress_public_key(&raw_pubkey)?;
+        pubkey_with_flag.push(0x02); // secp256r1 flag
+        pubkey_with_flag.extend_from_slice(&compressed_pubkey);
+    } else if raw_pubkey.len() == 32 {
+        // Ed25519 case
+        // The raw public key is 32 bytes directly
+        pubkey_with_flag.push(0x00); // Ed25519 flag
+        pubkey_with_flag.extend_from_slice(&raw_pubkey);
+    } else {
+        return Err(format!(
+            "Invalid public key format - expected 65 bytes (secp256r1) or 32 bytes (Ed25519), got {}",
+            raw_pubkey.len()
+        ).into());
+    }
 
     // Hash with Blake2b-256 for IOTA address
     let hash = Blake2b256::digest(&pubkey_with_flag);
@@ -40,20 +46,30 @@ pub fn derive_iota_address_from_der(der_bytes: &[u8]) -> Result<IotaAddress, Box
 }
 
 /// Extract raw public key bytes from DER encoding
+/// Supports both ECDSA secp256r1 (65 bytes) and Ed25519 (32 bytes)
 pub fn extract_raw_public_key_from_der(der_bytes: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
-    // DER structure for secp256r1: SEQUENCE { SEQUENCE { OID, NULL }, BIT STRING }
-
-    if der_bytes.len() < 70 {
+    if der_bytes.len() < 10 {
         return Err("Invalid DER: too short".into());
     }
 
     // Look for the bit string tag (0x03) and extract the public key
-    for i in 0..der_bytes.len().saturating_sub(65) {
-        if der_bytes[i] == 0x03 && der_bytes.get(i + 1) == Some(&0x42) {
-            // Found bit string with 66 bytes (0x42 = 66 decimal)
-            // Next byte should be 0x00 (unused bits), then 65 bytes of public key
-            if der_bytes.get(i + 2) == Some(&0x00) && i + 3 + 65 <= der_bytes.len() {
-                return Ok(der_bytes[i + 3..i + 3 + 65].to_vec());
+    for i in 0..der_bytes.len().saturating_sub(10) {
+        if der_bytes[i] == 0x03 {
+            // Found bit string tag, check length byte
+            if let Some(&length) = der_bytes.get(i + 1) {
+                if length == 0x42 && der_bytes.get(i + 2) == Some(&0x00) {
+                    // ECDSA case: bit string with 66 bytes (0x42 = 66 decimal)
+                    // Next byte is 0x00 (unused bits), then 65 bytes of public key
+                    if i + 3 + 65 <= der_bytes.len() {
+                        return Ok(der_bytes[i + 3..i + 3 + 65].to_vec());
+                    }
+                } else if length == 0x21 && der_bytes.get(i + 2) == Some(&0x00) {
+                    // Ed25519 case: bit string with 33 bytes (0x21 = 33 decimal)
+                    // Next byte is 0x00 (unused bits), then 32 bytes of public key
+                    if i + 3 + 32 <= der_bytes.len() {
+                        return Ok(der_bytes[i + 3..i + 3 + 32].to_vec());
+                    }
+                }
             }
         }
     }

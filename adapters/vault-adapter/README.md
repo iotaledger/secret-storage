@@ -12,7 +12,7 @@ This adapter provides integration between IOTA Secret Storage and HashiCorp Vaul
 
 ## Prerequisites
 
-- HashiCorp Vault server (development or production)
+- HashiCorp Vault server v1.20+ (development or production)
 - Transit secrets engine enabled
 - Valid Vault authentication token
 

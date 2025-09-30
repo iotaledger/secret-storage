@@ -25,7 +25,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-VAULT_VERSION="1.15"
+VAULT_VERSION="1.20"
 CONTAINER_NAME="iota-vault-dev"
 VAULT_PORT="8200"
 VAULT_ADDR="http://localhost:${VAULT_PORT}"
@@ -144,7 +144,7 @@ start_vault() {
             -p ${VAULT_PORT}:8200 \
             -e "VAULT_DEV_ROOT_TOKEN_ID=${VAULT_TOKEN}" \
             -e "VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200" \
-            vault:${VAULT_VERSION} > /dev/null
+            hashicorp/vault:${VAULT_VERSION} > /dev/null
     fi
     
     if wait_for_vault; then
