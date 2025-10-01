@@ -56,33 +56,15 @@ pub async fn submit_via_sdk(
         sig_bytes.extend_from_slice(&s_32);
         sig_bytes.extend_from_slice(&compressed_pubkey);
         
-    } else if raw_pubkey.len() == 32 {
-        // Ed25519 case
-        println!("🔍 Processing Ed25519 signature");
-        
-        if signature.len() != 64 {
-            return Err(format!("Ed25519 signature must be 64 bytes, got {}", signature.len()).into());
-        }
-
-        // Create IOTA signature format: [scheme_flag:1][signature:64][pubkey:32]
-        sig_bytes.push(0x00); // Ed25519 scheme flag
-        sig_bytes.extend_from_slice(signature); // Raw 64-byte Ed25519 signature
-        sig_bytes.extend_from_slice(&raw_pubkey); // Raw 32-byte Ed25519 public key
-        
-        println!("   🔍 Ed25519 signature bytes: {}", hex::encode(signature));
-        println!("   🔍 Ed25519 public key: {}", hex::encode(&raw_pubkey));
-        println!("   🔍 Final IOTA signature: {}", hex::encode(&sig_bytes));
-        
     } else {
         return Err(format!(
-            "Unsupported public key format: {} bytes", 
+            "Unsupported public key format: {} bytes. Only ECDSA secp256r1 (65 bytes uncompressed) is supported",
             raw_pubkey.len()
         ).into());
     }
 
-    // Signature format varies by scheme:
-    // ECDSA: [0x02][r:32][s:32][pubkey_compressed:33] = 98 bytes
-    // Ed25519: [0x00][signature:64][pubkey:32] = 97 bytes
+    // ECDSA secp256r1 signature format:
+    // [0x02][r:32][s:32][pubkey_compressed:33] = 98 bytes
 
     // Create GenericSignature from signature bytes
     // For ECDSA secp256r1, we use the signature format directly

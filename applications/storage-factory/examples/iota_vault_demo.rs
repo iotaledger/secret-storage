@@ -254,8 +254,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!("   📝 Signer will automatically determine correct data format");
 
     let signer = storage.get_signer(&key_id)?;
-    // For Ed25519 in IOTA, we need to pass the Blake2b-256 digest, not raw data
-    // This matches IOTA's expectation that Ed25519 signs the Blake2b-256 hash
+    // For ECDSA P-256 in IOTA, we pass the Blake2b-256 digest
     let vault_signature = signer.sign(&digest.to_vec()).await?;
 
     println!("✅ Transaction signed successfully with Vault");
@@ -265,7 +264,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Process signature for IOTA submission
     // Signature and public key processing is now handled automatically
-    // in submit_via_sdk based on the key type (ECDSA vs Ed25519)
+    // in submit_via_sdk (ECDSA P-256 only)
 
     // Display comprehensive transaction information
     println!("\n📊 COMPLETE TRANSACTION INFORMATION");

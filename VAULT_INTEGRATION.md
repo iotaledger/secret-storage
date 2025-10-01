@@ -16,7 +16,6 @@ A complete HashiCorp Vault adapter has been created following the same hexagonal
 - ✅ **Error Handling**: Comprehensive error types with proper conversions
 
 ### **Infrastructure & Tooling**
-- ✅ **Development Script**: `scripts/vault-dev.sh` for easy Vault management
 - ✅ **Docker Compose**: `docker-compose.vault.yml` for containerized testing
 - ✅ **Examples**: Basic usage and comprehensive signing demonstrations
 - ✅ **Documentation**: Complete README with usage examples
@@ -114,6 +113,8 @@ The Vault adapter follows the same hexagonal architecture as the AWS KMS adapter
 │ │ - KeyGenerate       │ │
 │ │ - KeySign           │ │
 │ │ - KeyDelete         │ │
+│ │ - KeyExist          │ │
+│ │ - KeyGet            │ │
 │ │ - Signer            │ │
 │ └─────────────────────┘ │
 └─────────────────────────┘
@@ -150,6 +151,25 @@ The Vault adapter follows the same hexagonal architecture as the AWS KMS adapter
 - Comprehensive error types for different failure scenarios
 - Proper error conversion to secret-storage-core Error enum
 - Clear error messages with troubleshooting hints
+
+### **Core Traits Implementation**
+
+All secret-storage-core traits are fully implemented for HashiCorp Vault:
+
+| **Trait** | **Implementation** | **Description** |
+|-----------|-------------------|-----------------|
+| `KeyGenerate<VaultSignatureScheme, String>` | ✅ Complete | Generate ECDSA P-256 keys with optional custom names |
+| `KeySign<VaultSignatureScheme, String>` | ✅ Complete | Create signer instances for key operations |
+| `KeyDelete<String>` | ✅ Complete | Permanently delete keys from Vault Transit |
+| `KeyExist<String>` | ✅ Complete | Check if a key exists in Vault |
+| `KeyGet<VaultSignatureScheme, String>` | ✅ Complete | Retrieve public keys in DER format |
+| `Signer<VaultSignatureScheme>` | ✅ Complete | Sign data and retrieve public keys |
+
+**Key Features:**
+- **Validation**: All operations include key name validation
+- **Error Handling**: Robust error conversion with detailed messages
+- **Security**: Private keys never leave Vault's secure boundary
+- **Performance**: Direct Vault API integration without unnecessary layers
 
 ## 🔧 Development Tools
 
