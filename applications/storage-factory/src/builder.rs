@@ -17,8 +17,6 @@ pub enum StorageType {
     Vault,
     /// File system storage (for development)
     FileSystem,
-    /// Passkey storage
-    Passkey,
     /// Third-party service (e.g., DFNS)
     ThirdParty(String),
 }
@@ -41,10 +39,10 @@ pub enum StorageType {
 ///     .build_aws_kms()
 ///     .await?;
 /// 
-/// // Future: Passkey adapter  
-/// // let passkey_storage = StorageBuilder::new()
-/// //     .passkey()
-/// //     .build_passkey()
+/// // Future: File system adapter  
+/// // let fs_storage = StorageBuilder::new()
+/// //     .file_system()
+/// //     .build_file_system()
 /// //     .await?;
 /// # Ok(())
 /// # }
@@ -117,11 +115,6 @@ impl StorageBuilder {
         self
     }
 
-    /// Configure for passkey storage
-    pub fn passkey(mut self) -> Self {
-        self.storage_type = Some(StorageType::Passkey);
-        self
-    }
 
     /// Configure for third-party service
     pub fn third_party(mut self, service_name: String) -> Self {
@@ -232,7 +225,6 @@ impl StorageBuilder {
 
     // Future adapter builders will be added here when implemented:
     // - build_file_storage() 
-    // - build_passkey()
     // - build_wasm()
     // - build_dfns()
 

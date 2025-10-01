@@ -27,10 +27,10 @@
 //!         .build_vault()
 //!         .await?;
 //!
-//!     // Future: Passkey adapter
-//!     // let passkey_storage = StorageBuilder::new()
-//!     //     .passkey()
-//!     //     .build_passkey()
+//!     // Future: File system adapter
+//!     // let fs_storage = StorageBuilder::new()
+//!     //     .file_system()
+//!     //     .build_file_system()
 //!     //     .await?;
 //!     
 //!     Ok(())

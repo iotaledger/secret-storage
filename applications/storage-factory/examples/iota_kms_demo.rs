@@ -8,7 +8,7 @@
 //! 2. Auto-faucet to fund the generated address
 //! 3. Transferring 0.005 IOTA to target address
 //!
-//! Run with: AWS_REGION=eu-west-1 cargo run --package storage-factory --example iota_kms_demo
+//! Run with: AWS_REGION=eu-west-1 AWS_PROFILE=developer cargo run --package storage-factory --example iota_kms_demo
 //!
 //! Prerequisites: Configure AWS credentials (one of the following):
 //! - AWS CLI: `aws configure`
@@ -207,7 +207,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Submit transaction using IOTA SDK (recommended method)
     println!("\n🚀 Submitting transaction via IOTA SDK...");
     println!("📝 Converting signature to IOTA format and submitting transaction...");
-    
+
     match submit_via_sdk(&iota_client, &tx_data, &kms_signature, &public_key_der).await {
         Ok(digest) => {
             println!("✅ Transaction submitted successfully via IOTA SDK!");

@@ -22,7 +22,7 @@ secret-storage/
 ### Architectural Principles
 
 1. **Core Domain**: Contains only business logic and trait definitions
-2. **Adapters**: Specific implementations for different technologies (AWS KMS, filesystem, passkey)
+2. **Adapters**: Specific implementations for different technologies (AWS KMS, HashiCorp Vault, filesystem)
 3. **Applications**: Use case orchestration and adapter selection
 
 ## Implemented Components
@@ -443,11 +443,10 @@ AWS_REGION=eu-west-1
 ## Future Adapters Roadmap
 
 1. **Filesystem Adapter** - For development and testing
-2. **Passkey Adapter** - Self-custody client-side
-3. **DFNS Adapter** - Multi-party computation
-4. **Azure Key Vault** - Microsoft cloud HSM
-5. **Google Cloud KMS** - Google cloud key management
-6. **Hardware HSM** - Direct HSM integration
+2. **DFNS Adapter** - Multi-party computation
+3. **Azure Key Vault** - Microsoft cloud HSM
+4. **Google Cloud KMS** - Google cloud key management
+5. **Hardware HSM** - Direct HSM integration
 
 ## Security Considerations
 

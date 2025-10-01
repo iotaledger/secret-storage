@@ -124,7 +124,7 @@ The Vault adapter follows the same hexagonal architecture as the AWS KMS adapter
 | Feature | AWS KMS Adapter | Vault Adapter | Status |
 |---------|----------------|---------------|---------|
 | Key Generation | ✅ ECDSA P-256 | ✅ ECDSA P-256 | Complete |
-| Digital Signing | ✅ SHA-256 + ECDSA | ✅ SHA-256 + ECDSA | Complete |
+| Digital Signing | ✅ Blake2b-256 + ECDSA | ✅ Blake2b-256 + ECDSA | Complete |
 | Key Management | ✅ Full lifecycle | ✅ Full lifecycle | Complete |
 | Environment Config | ✅ AWS credentials | ✅ Vault token | Complete |
 | Builder Integration | ✅ Storage factory | ✅ Storage factory | Complete |
@@ -136,7 +136,7 @@ The Vault adapter follows the same hexagonal architecture as the AWS KMS adapter
 
 ### **Cryptographic Operations**
 - **Key Type**: ECDSA P-256 (secp256r1) 
-- **Signing**: SHA-256 digest + ECDSA signature
+- **Signing**: Blake2b-256 digest + ECDSA signature
 - **Key Format**: DER-encoded public keys
 - **Signature Format**: DER-encoded ECDSA signatures
 

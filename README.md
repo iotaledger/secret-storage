@@ -7,7 +7,7 @@ A flexible and secure key storage ecosystem for IOTA Trust Framework, following 
 This repository implements a multi-layered approach to key management:
 
 - **Core Domain**: Pure business logic and trait definitions
-- **Adapters**: Infrastructure implementations (AWS KMS, file system, passkey, etc.)
+- **Adapters**: Infrastructure implementations (AWS KMS, HashiCorp Vault, file system, etc.)
 - **Applications**: Use case orchestration and adapter selection
 
 ## 📁 Repository Structure
@@ -17,7 +17,8 @@ secret-storage/
 ├── core/
 │   └── secret-storage/              # Core traits and types
 ├── adapters/                        # Infrastructure adapters
-│   └── aws-kms-adapter/            # AWS KMS implementation
+│   ├── aws-kms-adapter/            # AWS KMS implementation
+│   └── vault-adapter/              # HashiCorp Vault implementation
 ├── applications/                    # Application layer
 │   └── storage-factory/            # Builder pattern for adapter selection
 ├── .env.example                    # Environment variables template
@@ -26,7 +27,9 @@ secret-storage/
 
 ## 🚀 Quick Start
 
-### 1. AWS Configuration Setup
+### Option A: AWS KMS
+
+#### 1. AWS Configuration Setup
 
 For detailed AWS setup instructions, see [AWS Setup Guide](README-AWS.md).
 
@@ -45,7 +48,7 @@ export AWS_SECRET_ACCESS_KEY=your_secret_key
 export AWS_REGION=eu-west-1
 ```
 
-### 2. Run IOTA KMS Demo
+#### 2. Run IOTA KMS Demo
 
 ```bash
 AWS_REGION=eu-west-1 AWS_PROFILE=your-profile cargo run --package storage-factory --example iota_kms_demo
@@ -57,7 +60,33 @@ This demo will:
 - Request testnet funds via faucet
 - Sign and submit an IOTA transaction
 
-### 3. Manual Adapter Configuration
+### Option B: HashiCorp Vault
+
+#### 1. Start Vault Server
+
+```bash
+# Start Vault with Docker Compose
+./scripts/vault-dev.sh start
+
+# Set environment variables
+export VAULT_ADDR="http://localhost:8200"
+export VAULT_TOKEN="dev-token"
+export VAULT_MOUNT_PATH="transit"
+```
+
+#### 2. Run IOTA Vault Demo
+
+```bash
+VAULT_ADDR=http://localhost:8200 VAULT_TOKEN=dev-token VAULT_MOUNT_PATH="transit" cargo run --package storage-factory --example iota_vault_demo
+```
+
+This demo will:
+- Generate a new Vault ECDSA P-256 key with dynamic identifier
+- Create an IOTA address from the public key
+- Request testnet funds via faucet (~10 IOTA)
+- Sign and submit an IOTA transaction to testnet
+
+### Manual Adapter Configuration
 
 ```rust
 use storage_factory::StorageBuilder;
@@ -67,6 +96,12 @@ let storage = StorageBuilder::new()
     .aws_kms()
     .with_region("eu-west-1".to_string())
     .build_aws_kms()
+    .await?;
+
+// HashiCorp Vault configuration
+let storage = StorageBuilder::new()
+    .vault()
+    .build_vault()
     .await?;
 ```
 
@@ -93,16 +128,40 @@ The `StorageBuilder` automatically detects which method is available:
 
 See [AWS Setup Guide](README-AWS.md) for detailed configuration instructions.
 
-For comprehensive architecture documentation, see [Technical Documentation](doc/documentation.en.md).
+## 🔧 HashiCorp Vault Authentication
+
+For HashiCorp Vault, set the following environment variables:
+
+```bash
+VAULT_ADDR="http://localhost:8200"     # Vault server address
+VAULT_TOKEN="dev-token"                # Vault authentication token
+VAULT_MOUNT_PATH="transit"             # Transit secrets engine mount path (optional, defaults to "transit")
 ```
+
+The `StorageBuilder` automatically detects Vault configuration from environment variables.
+
+For comprehensive architecture documentation, see [Technical Documentation](doc/documentation.en.md).
 
 
 ## 📋 Examples
 
-### IOTA KMS Demo (Main Example)
+### AWS KMS Examples
 
+**IOTA KMS Demo (Complete workflow)**
 ```bash
 AWS_REGION=eu-west-1 AWS_PROFILE=your-profile cargo run --package storage-factory --example iota_kms_demo
+```
+
+### HashiCorp Vault Examples
+
+**IOTA Vault Demo (Complete workflow)**
+```bash
+VAULT_ADDR=http://localhost:8200 VAULT_TOKEN=dev-token VAULT_MOUNT_PATH="transit" cargo run --package storage-factory --example iota_vault_demo
+```
+
+**Basic Vault Usage**
+```bash
+VAULT_ADDR=http://localhost:8200 VAULT_TOKEN=dev-token VAULT_MOUNT_PATH="transit" cargo run --package vault-adapter --example basic_usage
 ```
 
 ## 🔍 Implemented Features
@@ -125,6 +184,16 @@ AWS_REGION=eu-west-1 AWS_PROFILE=your-profile cargo run --package storage-factor
 - [x] IAM integration
 - [x] CloudTrail audit support
 
+### ✅ HashiCorp Vault Adapter
+- [x] Environment-based configuration
+- [x] Key generation with ECDSA P-256 (secp256r1)
+- [x] ECDSA signatures with Transit secrets engine
+- [x] Key existence checking
+- [x] Public key retrieval in DER format
+- [x] Key deletion with proper policies
+- [x] Docker containerization for local testing
+- [x] IOTA testnet transaction support
+
 ### ✅ Builder Pattern
 - [x] Auto-detection of available adapters
 - [x] Manual adapter configuration
@@ -142,7 +211,6 @@ AWS_REGION=eu-west-1 AWS_PROFILE=your-profile cargo run --package storage-factor
 The architecture supports additional adapters:
 
 - **File System Storage** - For development and testing
-- **Passkey Integration** - Client-side self-custody
 - **DFNS Service** - Multi-party computation
 - **Azure Key Vault** - Microsoft cloud HSM
 - **Google Cloud KMS** - Google cloud key management

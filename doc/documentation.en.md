@@ -2,7 +2,7 @@
 
 ## Overview
 
-**Secret Storage** is a modular Rust library implementing hexagonal architecture for secure cryptographic key management. The system provides a flexible, trait-based foundation that enables horizontal scaling across diverse key management strategies, from cloud HSMs to passkeys and third-party MPC providers.
+**Secret Storage** is a modular Rust library implementing hexagonal architecture for secure cryptographic key management. The system provides a flexible, trait-based foundation that enables horizontal scaling across diverse key management strategies, from cloud HSMs to third-party MPC providers.
 
 ## Hexagonal Architecture
 
@@ -30,7 +30,6 @@ secret-storage/
 │   └── Cargo.toml
 ├── adapters/                      # 🔌 ADAPTERS: Infrastructure implementations
 │   ├── aws-kms-adapter/          # AWS KMS implementation
-│   ├── passkey-adapter/          # 🚧 Future: WebAuthn/Passkey support
 │   ├── dfns-adapter/             # 🚧 Future: Third party MPC integration
 │   └── file-storage-adapter/     # 🚧 Future: Local file-based storage
 └── applications/                  # 🏗️  APPLICATIONS: Business orchestration
@@ -68,7 +67,7 @@ fn get_signer(&self, key_id: &I) -> Result<Box<dyn Signer<K>>>
 ```
 - Provides signer interface for specific keys
 - Maintains enclave principle (private keys never leave secure boundaries)
-- **Adapters**: Cloud HSMs, browser passkeys, hardware tokens
+- **Adapters**: Cloud HSMs, hardware tokens
 
 #### KeyDelete - Secure Disposal
 ```rust
@@ -113,13 +112,6 @@ The adapter layer bridges **core business logic** with **concrete infrastructure
 
 The modular architecture enables **effortless expansion** to new key management strategies:
 
-#### Passkey Adapter (`adapters/passkey-adapter/`) 🚧
-**WebAuthn/FIDO2 integration for consumer applications**:
-- Browser-native cryptographic operations
-- Biometric authentication (TouchID, FaceID, fingerprint)
-- Hardware security key support (YubiKey, etc.)
-- Cross-platform compatibility (Web, mobile, desktop)
-
 #### WASM Adapter (`adapters/wasm-adapter/`) 🚧
 **WebAssembly runtime integration**:
 - Client-side key generation and signing
@@ -154,7 +146,7 @@ The application layer **combines adapters** and provides **high-level business w
 ### Storage Factory (`applications/storage-factory/`)
 **Explicit adapter selection with builder pattern**:
 - ✅ **Builder pattern**: Type-safe adapter configuration with dedicated build methods
-- ✅ **Explicit selection**: Clear `build_aws_kms()`, `build_passkey()`, etc. methods
+- ✅ **Explicit selection**: Clear `build_aws_kms()`, `build_vault()`, etc. methods
 - ✅ **Multi-auth support**: Automatic detection of AWS Profile vs. direct credentials
 - ✅ **Environment configuration**: Region, key ID, and other adapter-specific settings
 
@@ -212,10 +204,10 @@ let aws_storage = StorageBuilder::new()
     .build_aws_kms()
     .await?;
 
-// Future: Passkey storage
-let passkey_storage = StorageBuilder::new()
-    .passkey()
-    .build_passkey()
+// Future: File system storage
+let fs_storage = StorageBuilder::new()
+    .file_system()
+    .build_file_system()
     .await?;
 ```
 
@@ -224,7 +216,7 @@ let passkey_storage = StorageBuilder::new()
 ### Enclave Principle
 **Private keys never leave secure boundaries**:
 - AWS KMS: Keys remain in FIPS 140-2 Level 3 HSMs
-- Passkeys: Keys stored in secure enclaves (Secure Enclave, TPM)
+- Hardware tokens: Keys stored in secure enclaves (Secure Enclave, TPM)
 - MPC: Keys exist only as distributed shares
 
 ### Principle of Least Privilege
