@@ -11,7 +11,7 @@ use crate::{
     VaultConfig, VaultError, VaultSigner,
     utils::vault_client::VaultClient,
     utils::{
-        crypto_utils::validate_key_name,
+        key_utils::validate_key_name,
         vault_operations::{create_signing_key, get_public_key, key_exists, delete_key},
     },
 };

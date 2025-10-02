@@ -38,7 +38,6 @@ impl Signer<VaultSignatureScheme> for VaultSigner {
 
     async fn sign(&self, input: &Vec<u8>) -> Result<Vec<u8>> {
         // ECDSA P-256 (secp256r1): sign pre-hashed data (Blake2b-256 digest, 32 bytes)
-        println!("🔍 ECDSA P-256 (secp256r1): signing pre-hashed data ({} bytes)", input.len());
         let signature = sign_data(&self.client, &self.key_name, input)
             .await
             .map_err(|e| VaultError::General(format!("Failed to sign data with ECDSA: {}", e)))?;

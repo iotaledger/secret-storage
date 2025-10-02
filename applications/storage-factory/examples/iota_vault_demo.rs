@@ -166,7 +166,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         total_balance,
         total_balance as f64 / 1_000_000_000.0
     );
-    println!("   🪙 Available coins: {}", coins.len());
 
     if coins.is_empty() {
         return Err(format!(
@@ -293,7 +292,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!("\n🚀 SUBMITTING TRANSACTION TO IOTA TESTNET");
     println!("{}", "=".repeat(50));
     println!("📝 Converting Vault signature to IOTA format...");
-    
+
     // Process signature and submit to IOTA
     println!("📡 Submitting via IOTA SDK...");
 

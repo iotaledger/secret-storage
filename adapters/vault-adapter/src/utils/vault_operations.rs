@@ -95,7 +95,6 @@ pub async fn sign_data(
     // ECDSA: Use prehashed=false for IOTA compatibility
     // When prehashed=false, Vault applies SHA-256 internally before signing
     // This is compatible with IOTA's signature validation when we pass Blake2b-256 digest
-    println!("🔍 ECDSA P-256 signing: data size {} bytes, prehashed: false", data.len());
     let payload = json!({
         "input": input_b64,
         "prehashed": false
@@ -159,10 +158,9 @@ pub async fn delete_key(
     });
     
     let update_path = format!("{}/keys/{}/config", client.config().mount_path, key_name);
-    if let Err(e) = client.post(&update_path, &update_payload).await {
+    if let Err(_e) = client.post(&update_path, &update_payload).await {
         // If updating fails, it might already be configured for deletion or the key doesn't exist
         // We'll try to delete anyway
-        eprintln!("Warning: Could not update key deletion policy: {}", e);
     }
     
     // Now attempt to delete the key

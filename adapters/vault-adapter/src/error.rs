@@ -33,6 +33,29 @@ pub enum VaultError {
 
 impl From<VaultError> for secret_storage_core::Error {
     fn from(err: VaultError) -> Self {
-        secret_storage_core::Error::Other(anyhow::Error::new(err))
+        match err {
+            VaultError::KeyNotFound(id) => secret_storage_core::Error::KeyNotFound(id),
+            VaultError::Http(e) => {
+                secret_storage_core::Error::StoreDisconnected(e.to_string())
+            }
+            VaultError::Configuration(e) => secret_storage_core::Error::Other(anyhow::anyhow!(e)),
+            VaultError::Api(ref msg) if msg.contains("404") => {
+                secret_storage_core::Error::KeyNotFound("Key not found in Vault".to_string())
+            }
+            VaultError::Api(e) => secret_storage_core::Error::Other(anyhow::anyhow!(e)),
+            VaultError::Json(e) => secret_storage_core::Error::Other(anyhow::anyhow!(
+                "JSON serialization error: {}",
+                e
+            )),
+            VaultError::Base64(e) => secret_storage_core::Error::Other(anyhow::anyhow!(
+                "Base64 encoding error: {}",
+                e
+            )),
+            VaultError::Crypto(e) => secret_storage_core::Error::Other(anyhow::anyhow!(
+                "Cryptographic error: {}",
+                e
+            )),
+            VaultError::General(e) => secret_storage_core::Error::Other(anyhow::anyhow!(e)),
+        }
     }
 }
