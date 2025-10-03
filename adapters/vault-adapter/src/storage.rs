@@ -53,6 +53,25 @@ pub struct VaultKeyOptions {
     pub key_name: Option<String>,
 }
 
+impl VaultKeyOptions {
+    /// Create new VaultKeyOptions with default values
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set key description
+    pub fn with_description(mut self, description: &str) -> Self {
+        self.description = Some(description.to_string());
+        self
+    }
+
+    /// Set key name
+    pub fn with_key_name(mut self, key_name: &str) -> Self {
+        self.key_name = Some(key_name.to_string());
+        self
+    }
+}
+
 #[cfg_attr(not(feature = "send-sync-storage"), async_trait(?Send))]
 #[cfg_attr(feature = "send-sync-storage", async_trait)]
 impl KeyGenerate<VaultSignatureScheme, String> for VaultStorage {
