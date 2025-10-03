@@ -1,0 +1,176 @@
+# Copyright 2020-2024 IOTA Stiftung
+# SPDX-License-Identifier: Apache-2.0
+
+#
+# Docker Compose configuration for IOTA Secret Storage K8s-like testing environment
+#
+# This setup provides:
+# - HashiCorp Vault with Transit engine
+# - Transaction API service for IOTA operations
+# - Health checks and service discovery
+# - K8s-like networking and service mesh patterns
+#
+# Usage:
+#   docker-compose up -d                    # Start all services
+#   docker-compose up vault                 # Start only Vault
+#   docker-compose logs transaction-api     # View API logs
+#   docker-compose down                     # Stop all services
+#
+# Access:
+#   Vault UI:        http://localhost:8200/ui (token: dev-token)
+#   Transaction API: http://localhost:3000
+#   Health Check:    http://localhost:3000/health
+#
+# Environment variables:
+#   VAULT_ADDR=http://localhost:8200
+#   VAULT_TOKEN=dev-token
+#   VAULT_MOUNT_PATH=transit
+#
+
+services:
+  # HashiCorp Vault - Secret Management Service
+  vault:
+    image: hashicorp/vault:1.20
+    container_name: iota-vault
+    restart: unless-stopped
+    networks:
+      - iota-network
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: dev-token
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+      VAULT_UI: true
+      VAULT_ADDR: http://0.0.0.0:8200
+      VAULT_TOKEN: dev-token
+    cap_add:
+      - IPC_LOCK
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    volumes:
+      - vault-data:/vault/data
+      - vault-logs:/vault/logs
+    labels:
+      - "service.type=security"
+      - "service.component=secret-management"
+    command: >
+      sh -c "
+        vault server -dev
+        -dev-root-token-id=dev-token
+        -dev-listen-address=0.0.0.0:8200
+      "
+
+  # Vault Initialization Service
+  vault-init:
+    image: hashicorp/vault:1.20
+    container_name: iota-vault-init
+    networks:
+      - iota-network
+    depends_on:
+      vault:
+        condition: service_healthy
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: dev-token
+    command: >
+      sh -c "
+        echo '🔧 Initializing Vault for IOTA Secret Storage...' &&
+        sleep 2 &&
+        echo '🔑 Enabling Transit secrets engine...' &&
+        (vault secrets enable -path=transit transit || echo '⚠️ Transit engine already enabled') &&
+        echo '✅ Transit engine ready!' &&
+        echo '🎯 Creating test ECDSA P-256 key...' &&
+        (vault write transit/keys/iota-test-key type=ecdsa-p256 || echo '⚠️ Key already exists') &&
+        echo '📋 Vault configuration completed!' &&
+        echo '🚀 Ready for IOTA Secret Storage operations.'
+      "
+    restart: "no"
+    labels:
+      - "service.type=init"
+
+  # IOTA Transaction API Service
+  transaction-api:
+    image: iota-transaction-api:fixed
+    container_name: iota-transaction-api
+    restart: unless-stopped
+    networks:
+      - iota-network
+    ports:
+      - "3000:3000"
+    # Debug with strace to see what the binary does
+    command: ["sh", "-c", "echo 'Container starting...' && strace -e trace=write,exit_group ./transaction-api 2>&1 || echo 'Exit code:' $?"]
+    environment:
+      # Vault Configuration
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: dev-token
+      VAULT_MOUNT_PATH: transit
+
+      # API Configuration
+      API_HOST: 0.0.0.0
+      API_PORT: 3000
+
+      # IOTA Configuration
+      IOTA_NETWORK: testnet
+      ENVIRONMENT: development
+
+      # Logging
+      RUST_LOG: info,transaction_api=debug,secret_storage_core=debug
+    depends_on:
+      vault:
+        condition: service_healthy
+      vault-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "service.type=api"
+      - "service.component=transaction-orchestrator"
+    volumes:
+      # Mount for configuration if needed
+      - ./deployment/config:/app/config:ro
+
+  # Optional: IOTA Node (Hornet) for realistic testing
+  # iota-node:
+  #   image: iotaledger/hornet:2.0
+  #   container_name: iota-hornet
+  #   networks:
+  #     - iota-network
+  #   ports:
+  #     - "14265:14265"
+  #     - "8081:8081"
+  #   environment:
+  #     HORNET_NETWORK_ID: testnet
+  #   volumes:
+  #     - hornet-data:/app/data
+
+volumes:
+  vault-data:
+    driver: local
+    labels:
+      - "volume.type=persistent"
+      - "volume.service=vault"
+  vault-logs:
+    driver: local
+    labels:
+      - "volume.type=logs"
+  # hornet-data:
+  #   driver: local
+
+networks:
+  iota-network:
+    name: iota-secret-storage
+    driver: bridge
+    labels:
+      - "network.type=application"
+      - "network.purpose=iota-testing"
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
