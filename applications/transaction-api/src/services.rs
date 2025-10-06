@@ -107,7 +107,7 @@ impl TransactionService {
         }
 
         // Wait for faucet
-        tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+        tokio::time::sleep(std::time::Duration::from_secs(15)).await;
 
         // Step 5: Check balance
         let (total_balance, coins) = self
@@ -208,9 +208,13 @@ impl TransactionService {
         let encoded_point = verifying_key.to_encoded_point(true);
         let compressed = encoded_point.as_bytes();
 
+        // IOTA uses 0x02 flag for ECDSA Secp256r1
+        let mut pubkey_with_flag = Vec::new();
+        pubkey_with_flag.push(0x02);
+        pubkey_with_flag.extend_from_slice(compressed);
+
         let mut hasher = Blake2b256::new();
-        hasher.update([0x00]); // ECDSA Secp256r1 flag
-        hasher.update(compressed);
+        hasher.update(&pubkey_with_flag);
         let hash = hasher.finalize();
 
         let mut addr_bytes = [0u8; 32];
@@ -222,12 +226,12 @@ impl TransactionService {
         &self,
         address: IotaAddress,
     ) -> Result<String, Box<dyn std::error::Error>> {
-        let url = format!(
-            "https://faucet.testnet.iota.cafe/v1/gas?address={}",
-            address
-        );
-        let response = reqwest::get(&url).await?.text().await?;
-        Ok(response)
+        const TESTNET_FAUCET_URL: &str = "https://faucet.testnet.iota.cafe/gas";
+
+        iota::client_commands::request_tokens_from_faucet(address, TESTNET_FAUCET_URL.to_string())
+            .await?;
+
+        Ok("Faucet request completed successfully".to_string())
     }
 
     async fn check_balance(
@@ -251,21 +255,25 @@ impl TransactionService {
         public_key_der: &[u8],
     ) -> Result<String, Box<dyn std::error::Error>> {
         use iota_types::signature::GenericSignature;
-        use p256::ecdsa::{Signature as P256Signature, VerifyingKey};
+        use p256::ecdsa::VerifyingKey;
         use p256::pkcs8::DecodePublicKey;
 
-        // Parse DER signature to get r and s
-        let der_sig = P256Signature::from_der(vault_signature)?;
-        let sig_bytes = der_sig.to_bytes();
+        // Parse DER signature and canonicalize
+        let (r_bytes, s_bytes) = self.parse_der_signature(vault_signature)?;
+
+        // Combine r and s into 64-byte signature
+        let mut sig_bytes = Vec::with_capacity(64);
+        sig_bytes.extend_from_slice(&r_bytes);
+        sig_bytes.extend_from_slice(&s_bytes);
 
         // Get compressed public key
         let verifying_key = VerifyingKey::from_public_key_der(public_key_der)?;
         let encoded_point = verifying_key.to_encoded_point(true);
         let compressed_pubkey = encoded_point.as_bytes();
 
-        // Create IOTA signature: flag + sig + pubkey
+        // Create IOTA signature: flag + sig(64) + pubkey(33)
         let mut iota_sig = Vec::with_capacity(1 + 64 + 33);
-        iota_sig.push(0x00); // ECDSA Secp256r1 flag
+        iota_sig.push(0x02); // IOTA secp256r1 flag
         iota_sig.extend_from_slice(&sig_bytes);
         iota_sig.extend_from_slice(compressed_pubkey);
 
@@ -282,5 +290,94 @@ impl TransactionService {
             .await?;
 
         Ok(response.digest.to_string())
+    }
+
+    fn parse_der_signature(&self, der_signature: &[u8]) -> Result<(Vec<u8>, Vec<u8>), Box<dyn std::error::Error>> {
+        if der_signature.len() < 8 || der_signature[0] != 0x30 {
+            return Err("Invalid DER signature format".into());
+        }
+
+        let mut pos = 2;
+
+        // Parse r
+        if der_signature[pos] != 0x02 {
+            return Err("Expected INTEGER tag for r".into());
+        }
+        pos += 1;
+        let r_len = der_signature[pos] as usize;
+        pos += 1;
+        let mut r_bytes = der_signature[pos..pos + r_len].to_vec();
+        pos += r_len;
+
+        if r_bytes.len() > 32 && r_bytes[0] == 0x00 {
+            r_bytes = r_bytes[1..].to_vec();
+        }
+        while r_bytes.len() < 32 {
+            r_bytes.insert(0, 0x00);
+        }
+
+        // Parse s
+        if der_signature[pos] != 0x02 {
+            return Err("Expected INTEGER tag for s".into());
+        }
+        pos += 1;
+        let s_len = der_signature[pos] as usize;
+        pos += 1;
+        let mut s_bytes = der_signature[pos..pos + s_len].to_vec();
+
+        if s_bytes.len() > 32 && s_bytes[0] == 0x00 {
+            s_bytes = s_bytes[1..].to_vec();
+        }
+        while s_bytes.len() < 32 {
+            s_bytes.insert(0, 0x00);
+        }
+
+        // Canonicalize s
+        s_bytes = self.canonicalize_s_value(&s_bytes)?;
+
+        Ok((r_bytes, s_bytes))
+    }
+
+    fn canonicalize_s_value(&self, s_bytes: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+        let n_div_2: [u8; 32] = [
+            0x7f, 0xff, 0xff, 0xff, 0x80, 0x00, 0x00, 0x00, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xde, 0x73, 0x7d, 0x56, 0xd3, 0x8b, 0xcf, 0x42, 0x79, 0xdc, 0xe5, 0x61, 0x7e, 0x31,
+            0x92, 0xa8,
+        ];
+
+        let mut s_32 = [0u8; 32];
+        let s_len = std::cmp::min(s_bytes.len(), 32);
+        s_32[32 - s_len..].copy_from_slice(&s_bytes[s_bytes.len() - s_len..]);
+
+        let mut s_high = false;
+        for i in 0..32 {
+            if s_32[i] > n_div_2[i] {
+                s_high = true;
+                break;
+            } else if s_32[i] < n_div_2[i] {
+                break;
+            }
+        }
+
+        if s_high {
+            let n: [u8; 32] = [
+                0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+                0xff, 0xff, 0xbc, 0xe6, 0xfa, 0xad, 0xa7, 0x17, 0x9e, 0x84, 0xf3, 0xb9, 0xca, 0xc2,
+                0xfc, 0x63, 0x25, 0x51,
+            ];
+
+            let mut result = [0u8; 32];
+            let mut borrow = 0u16;
+
+            for i in (0..32).rev() {
+                let temp = n[i] as u16 + 256 - s_32[i] as u16 - borrow;
+                result[i] = (temp % 256) as u8;
+                borrow = if temp < 256 { 1 } else { 0 };
+            }
+
+            Ok(result.to_vec())
+        } else {
+            Ok(s_32.to_vec())
+        }
     }
 }

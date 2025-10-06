@@ -55,6 +55,7 @@ hex = "0.4"
 async-trait = "0.1"
 
 # IOTA dependencies (matching storage-factory)
+iota = { git = "https://github.com/iotaledger/iota.git", package = "iota", tag = "v1.6.1" }
 iota-keys = { git = "https://github.com/iotaledger/iota.git", package = "iota-keys", tag = "v1.6.1" }
 iota-sdk = { git = "https://github.com/iotaledger/iota.git", package = "iota-sdk", tag = "v1.6.1" }
 iota-types = { git = "https://github.com/iotaledger/iota.git", package = "iota-types", tag = "v1.6.1" }
