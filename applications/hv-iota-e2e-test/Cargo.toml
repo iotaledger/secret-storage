@@ -1,5 +1,5 @@
 [package]
-name = "transaction-api"
+name = "hv-iota-e2e-test"
 version = "0.1.0"
 edition = "2021"
 authors = ["IOTA Stiftung"]
@@ -11,7 +11,7 @@ description = "REST API for IOTA Secret Storage transaction orchestration"
 keywords = ["iota", "api", "vault", "storage", "transaction"]
 
 [[bin]]
-name = "transaction-api"
+name = "hv-iota-e2e-test"
 path = "src/main.rs"
 
 [dependencies]

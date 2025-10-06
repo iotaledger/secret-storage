@@ -29,7 +29,7 @@ WORKDIR /app
 COPY . .
 
 # Build the binary in release mode
-RUN cargo build --release --package transaction-api --features vault
+RUN cargo build --release --package hv-iota-e2e-test --features vault
 
 # Runtime stage
 FROM debian:bookworm-slim
@@ -45,15 +45,15 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy the binary from builder
-COPY --from=builder /app/target/release/transaction-api .
+COPY --from=builder /app/target/release/hv-iota-e2e-test .
 
 # Expose port
 EXPOSE 3001
 
 # Set default environment variables
-ENV RUST_LOG=info,transaction_api=debug
+ENV RUST_LOG=info,hv_iota_e2e_test=debug
 ENV API_HOST=0.0.0.0
 ENV API_PORT=3001
 
 # Run the binary
-CMD ["./transaction-api"]
+CMD ["./hv-iota-e2e-test"]

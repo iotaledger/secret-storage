@@ -15,10 +15,10 @@
 
 services:
   # IOTA Transaction API Service (connects to external Vault)
-  transaction-api:
+  hv-iota-e2e-test:
     build:
       context: .
-      dockerfile: applications/transaction-api/Dockerfile
+      dockerfile: applications/hv-iota-e2e-test/Dockerfile
     restart: unless-stopped
     ports:
       - "3001:3001"
@@ -37,10 +37,10 @@ services:
       ENVIRONMENT: development
 
       # Logging
-      RUST_LOG: info,transaction_api=debug,secret_storage_core=debug
+      RUST_LOG: info,hv_iota_e2e_test=debug,secret_storage_core=debug
 
     # Run the transaction API
-    command: ["./transaction-api"]
+    command: ["./hv-iota-e2e-test"]
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]

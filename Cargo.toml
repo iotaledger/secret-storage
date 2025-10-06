@@ -5,7 +5,7 @@ members = [
     "adapters/aws-kms-adapter",
     "adapters/vault-adapter",
     "applications/storage-factory",
-    "applications/transaction-api",
+    "applications/hv-iota-e2e-test",
 ]
 
 [workspace.dependencies]

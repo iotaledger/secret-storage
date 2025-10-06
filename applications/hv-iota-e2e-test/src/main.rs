@@ -30,7 +30,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     tracing_subscriber::fmt()
         .with_env_filter(
-            env::var("RUST_LOG").unwrap_or_else(|_| "info,transaction_api=debug".to_string()),
+            env::var("RUST_LOG").unwrap_or_else(|_| "info,hv_iota_e2e_test=debug".to_string()),
         )
         .with_target(false)
         .compact()

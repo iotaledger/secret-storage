@@ -9,18 +9,18 @@ echo "Environment:"
 env | grep -E "(VAULT|API|RUST)" | head -10
 
 echo "=== BINARY CHECK ==="
-ls -la /app/transaction-api
-file /app/transaction-api 2>/dev/null || echo "file command not available"
+ls -la /app/hv-iota-e2e-test
+file /app/hv-iota-e2e-test 2>/dev/null || echo "file command not available"
 
 echo "=== LIBRARY CHECK ==="
-ldd /app/transaction-api
+ldd /app/hv-iota-e2e-test
 
 echo "=== EXECUTION TEST ==="
 echo "Running binary with full capture..."
 
 # Capture all output
 exec 2>&1
-/app/transaction-api &
+/app/hv-iota-e2e-test &
 PID=$!
 echo "Binary started with PID: $PID"
 
