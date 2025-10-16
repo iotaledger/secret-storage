@@ -17,8 +17,8 @@
 //!
 //! Usage:
 //! ```bash
-//! # Start Vault with docker-compose (see scripts/vault-dev.sh)
-//! ./scripts/vault-dev.sh
+//! # Start Vault with docker-compose
+//! docker-compose -f docker-compose.vault.yml up -d
 //!
 //! # Set environment variables
 //! export VAULT_ADDR="http://localhost:8200"

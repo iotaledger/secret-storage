@@ -14,7 +14,7 @@
 //!
 //! Quick setup:
 //! ```bash
-//! ./scripts/vault-dev.sh start
+//! docker-compose -f docker-compose.vault.yml up -d
 //! export VAULT_ADDR="http://localhost:8200"
 //! export VAULT_TOKEN="dev-token"
 //! export VAULT_MOUNT_PATH="transit"
@@ -98,7 +98,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .vault()
         .build_vault()
         .await
-        .map_err(|e| format!("Failed to initialize Vault storage: {}\n\nTroubleshooting:\n• Ensure Vault server is running: ./scripts/vault-dev.sh start\n• Check VAULT_ADDR environment variable\n• Verify VAULT_TOKEN is valid\n• Ensure Transit engine is enabled", e))?;
+        .map_err(|e| format!("Failed to initialize Vault storage: {}\n\nTroubleshooting:\n• Ensure Vault server is running: docker-compose -f docker-compose.vault.yml up -d\n• Check VAULT_ADDR environment variable\n• Verify VAULT_TOKEN is valid\n• Ensure Transit engine is enabled", e))?;
 
     println!("✅ HashiCorp Vault storage initialized");
     println!("   🔐 Connected to Vault Transit secrets engine");

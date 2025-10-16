@@ -209,7 +209,8 @@ impl StorageBuilder {
         }
 
         if let Some(token) = self.configuration.vault_token {
-            config.token = token;
+            config.token = Some(token);
+            config.agent_mode = false;
         }
 
         if let Some(mount_path) = self.configuration.vault_mount_path {

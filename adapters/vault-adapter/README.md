@@ -21,10 +21,7 @@ This adapter provides integration between IOTA Secret Storage and HashiCorp Vaul
 ### 1. Start Vault Development Server
 
 ```bash
-# Using the provided script
-./scripts/vault-dev.sh start
-
-# Or using Docker Compose
+# Using Docker Compose
 docker-compose -f docker-compose.vault.yml up -d
 ```
 
@@ -53,8 +50,29 @@ cargo run --package vault-adapter --example signing_demo
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
 | `VAULT_ADDR` | Vault server address | - | Yes |
-| `VAULT_TOKEN` | Authentication token | - | Yes |
+| `VAULT_TOKEN` | Authentication token | - | No* |
 | `VAULT_MOUNT_PATH` | Transit engine mount path | `transit` | No |
+| `VAULT_AGENT_MODE` | Enable Vault Agent sidecar mode | `false` | No |
+
+\* `VAULT_TOKEN` is not required when `VAULT_AGENT_MODE=true`
+
+### Standard Configuration (Direct Connection)
+
+```bash
+export VAULT_ADDR="http://localhost:8200"
+export VAULT_TOKEN="dev-token"
+export VAULT_MOUNT_PATH="transit"  # optional, defaults to "transit"
+```
+
+### Vault Agent Sidecar Configuration (Kubernetes)
+
+```bash
+# App connects to local Vault Agent proxy
+export VAULT_ADDR="http://127.0.0.1:8100"
+export VAULT_AGENT_MODE="true"
+# No VAULT_TOKEN needed - injected automatically by agent
+export VAULT_MOUNT_PATH="transit"  # optional
+```
 
 ### Programmatic Configuration
 
@@ -64,11 +82,16 @@ use vault_adapter::{VaultConfig, VaultStorage};
 // From environment variables
 let storage = VaultStorage::from_env().await?;
 
-// Explicit configuration
+// Standard configuration with token
 let config = VaultConfig::new(
     "http://localhost:8200".to_string(),
-    "dev-token".to_string(),
-    Some("transit".to_string())
+    "dev-token".to_string()
+);
+let storage = VaultStorage::new(config).await?;
+
+// Vault Agent sidecar mode
+let config = VaultConfig::new_agent_mode(
+    "http://127.0.0.1:8100".to_string()
 );
 let storage = VaultStorage::new(config).await?;
 ```
@@ -157,6 +180,179 @@ The Vault adapter follows the hexagonal architecture pattern:
 - **Audit Logging**: All operations are logged through Vault's audit system
 - **Access Control**: Leverage Vault's policy system for fine-grained permissions
 - **Network Security**: Use TLS in production environments
+- **Vault Agent Pattern**: In Kubernetes, use Vault Agent sidecar for automatic token management
+
+## Kubernetes Deployment with Vault Agent Sidecar
+
+### Overview
+
+The Vault Agent sidecar pattern provides secure, zero-configuration authentication in Kubernetes:
+
+1. **Vault Agent** authenticates using the pod's ServiceAccount token
+2. Opens a local proxy on `127.0.0.1:8100`
+3. Automatically injects `X-Vault-Token` header in all requests
+4. Handles token renewal and rotation automatically
+
+### Benefits
+
+- ✅ No long-lived secrets in pods
+- ✅ Automatic token rotation (e.g., TTL 1h)
+- ✅ Reduced attack surface
+- ✅ Native Kubernetes authentication
+- ✅ Zero secret management in application code
+
+### Vault Agent Configuration
+
+Create `vault-agent-config.hcl`:
+
+```hcl
+# Auto-authentication using Kubernetes ServiceAccount
+auto_auth {
+  method "kubernetes" {
+    mount_path = "auth/kubernetes"
+    config = {
+      role = "iota-app"
+    }
+  }
+  
+  sink "file" {
+    config = {
+      path = "/vault/secrets/token"
+    }
+  }
+}
+
+# API proxy with automatic token injection
+api_proxy {
+  use_auto_auth_token = true
+}
+
+# Local listener for app connections
+listener "tcp" {
+  address = "127.0.0.1:8100"
+  tls_disable = true
+}
+
+# Vault server address
+vault {
+  address = "https://vault.company.com:8200"
+}
+```
+
+### Kubernetes Deployment YAML
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iota-app
+  namespace: iota
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: iota-app
+  template:
+    metadata:
+      labels:
+        app: iota-app
+    spec:
+      serviceAccountName: iota-app
+      
+      containers:
+      # Main application container
+      - name: app
+        image: iota-app:latest
+        env:
+        - name: VAULT_ADDR
+          value: "http://127.0.0.1:8100"
+        - name: VAULT_AGENT_MODE
+          value: "true"
+        - name: VAULT_MOUNT_PATH
+          value: "transit"
+        ports:
+        - containerPort: 8080
+      
+      # Vault Agent sidecar
+      - name: vault-agent
+        image: hashicorp/vault:latest
+        args:
+        - "agent"
+        - "-config=/vault/config/agent.hcl"
+        env:
+        - name: VAULT_ADDR
+          value: "https://vault.company.com:8200"
+        volumeMounts:
+        - name: vault-config
+          mountPath: /vault/config
+        - name: vault-secrets
+          mountPath: /vault/secrets
+      
+      volumes:
+      - name: vault-config
+        configMap:
+          name: vault-agent-config
+      - name: vault-secrets
+        emptyDir:
+          medium: Memory
+```
+
+### Vault Server Setup
+
+1. **Enable Kubernetes Auth**:
+```bash
+vault auth enable kubernetes
+
+vault write auth/kubernetes/config \
+    kubernetes_host="https://kubernetes.default.svc" \
+    kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+    token_reviewer_jwt=@/var/run/secrets/kubernetes.io/serviceaccount/token
+```
+
+2. **Create Role for App**:
+```bash
+vault write auth/kubernetes/role/iota-app \
+    bound_service_account_names=iota-app \
+    bound_service_account_namespaces=iota \
+    policies=iota-transit \
+    ttl=1h
+```
+
+3. **Create Transit Policy**:
+```bash
+vault policy write iota-transit - <<EOF
+# Transit secrets engine operations
+path "transit/keys/*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+
+path "transit/sign/*" {
+  capabilities = ["update"]
+}
+
+path "transit/verify/*" {
+  capabilities = ["update"]
+}
+EOF
+```
+
+### Testing the Setup
+
+```bash
+# Deploy the application
+kubectl apply -f deployment.yaml
+
+# Check that both containers are running
+kubectl get pods -n iota
+
+# View logs
+kubectl logs -n iota <pod-name> -c app
+kubectl logs -n iota <pod-name> -c vault-agent
+
+# Verify Vault Agent is working
+kubectl exec -n iota <pod-name> -c vault-agent -- \
+  cat /vault/secrets/token
+```
 
 ## Production Deployment
 
@@ -231,7 +427,7 @@ cargo run --package vault-adapter --example basic_usage
 cargo test --package vault-adapter
 
 # Integration tests (requires running Vault)
-./scripts/vault-dev.sh start
+docker-compose -f docker-compose.vault.yml up -d
 cargo test --package vault-adapter -- --ignored
 ```
 
@@ -239,16 +435,16 @@ cargo test --package vault-adapter -- --ignored
 
 ```bash
 # Start Vault development server
-./scripts/vault-dev.sh start
+docker-compose -f docker-compose.vault.yml up -d
 
 # Check status
-./scripts/vault-dev.sh status
+docker-compose -f docker-compose.vault.yml ps
 
 # View logs
-./scripts/vault-dev.sh logs
+docker-compose -f docker-compose.vault.yml logs -f vault
 
 # Clean up
-./scripts/vault-dev.sh clean
+docker-compose -f docker-compose.vault.yml down
 ```
 
 ## Contributing

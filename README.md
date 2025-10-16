@@ -31,7 +31,7 @@ secret-storage/
 
 #### 1. AWS Configuration Setup
 
-For detailed AWS setup instructions, see [AWS Setup Guide](README-AWS.md).
+For detailed AWS setup instructions, see [AWS Integration Guide](AWS_INTEGRATION.md).
 
 Quick configuration options:
 
@@ -66,7 +66,7 @@ This demo will:
 
 ```bash
 # Start Vault with Docker Compose
-./scripts/vault-dev.sh start
+docker-compose -f docker-compose.vault.yml up -d
 
 # Set environment variables
 export VAULT_ADDR="http://localhost:8200"
@@ -126,9 +126,11 @@ The `StorageBuilder` automatically detects which method is available:
 - If `AWS_PROFILE` is set, uses profile-based authentication
 - Otherwise, uses direct credentials from environment variables
 
-See [AWS Setup Guide](README-AWS.md) for detailed configuration instructions.
+See [AWS Integration Guide](AWS_INTEGRATION.md) for detailed configuration instructions.
 
 ## 🔧 HashiCorp Vault Authentication
+
+### Standard Mode (Development/Direct Connection)
 
 For HashiCorp Vault, set the following environment variables:
 
@@ -137,6 +139,24 @@ VAULT_ADDR="http://localhost:8200"     # Vault server address
 VAULT_TOKEN="dev-token"                # Vault authentication token
 VAULT_MOUNT_PATH="transit"             # Transit secrets engine mount path (optional, defaults to "transit")
 ```
+
+### Vault Agent Sidecar Mode (Kubernetes - Recommended for Production)
+
+For Kubernetes deployments, use the Vault Agent sidecar pattern for enhanced security:
+
+```bash
+VAULT_ADDR="http://127.0.0.1:8100"     # Local Vault Agent proxy
+VAULT_AGENT_MODE="true"                # Enable agent mode (no VAULT_TOKEN needed!)
+VAULT_MOUNT_PATH="transit"             # Transit secrets engine mount path (optional)
+```
+
+**Benefits:**
+- ✅ No long-lived secrets in pods
+- ✅ Automatic token rotation (e.g., TTL 1h)
+- ✅ ServiceAccount-based authentication
+- ✅ Reduced attack surface
+
+For complete Kubernetes setup with Vault Agent sidecar, see the [Vault Integration Guide](VAULT_INTEGRATION.md).
 
 The `StorageBuilder` automatically detects Vault configuration from environment variables.
 
@@ -162,6 +182,11 @@ VAULT_ADDR=http://localhost:8200 VAULT_TOKEN=dev-token VAULT_MOUNT_PATH="transit
 **Basic Vault Usage**
 ```bash
 VAULT_ADDR=http://localhost:8200 VAULT_TOKEN=dev-token VAULT_MOUNT_PATH="transit" cargo run --package vault-adapter --example basic_usage
+```
+
+**Vault Agent Sidecar Mode (Kubernetes)**
+```bash
+VAULT_ADDR=http://127.0.0.1:8100 VAULT_AGENT_MODE=true cargo run --package vault-adapter --example vault_agent_mode
 ```
 
 ## 🔍 Implemented Features
@@ -193,6 +218,9 @@ VAULT_ADDR=http://localhost:8200 VAULT_TOKEN=dev-token VAULT_MOUNT_PATH="transit
 - [x] Key deletion with proper policies
 - [x] Docker containerization for local testing
 - [x] IOTA testnet transaction support
+- [x] Vault Agent sidecar mode for Kubernetes
+- [x] ServiceAccount-based authentication
+- [x] Automatic token rotation support
 
 ### ✅ Builder Pattern
 - [x] Auto-detection of available adapters
@@ -259,6 +287,6 @@ Apache-2.0
 
 ## 📚 Additional Documentation
 
-- [AWS Setup Guide](README-AWS.md) - Complete AWS KMS configuration instructions
+- [AWS Setup Guide](AWS_INTEGRATION.md) - Complete AWS KMS configuration instructions
+- [Vault Integration Guide](VAULT_INTEGRATION.md) - Complete HashiCorp Vault setup and integration (includes Kubernetes deployment)
 - [Technical Documentation](doc/documentation.en.md) - Hexagonal architecture and adapter details
-- [Signature Documentation](doc/signature.en.md) - IOTA signature format specifications

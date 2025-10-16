@@ -10,12 +10,14 @@ use crate::VaultError;
 pub struct VaultConfig {
     /// Vault server address
     pub addr: String,
-    /// Vault authentication token
-    pub token: String,
+    /// Vault authentication token (optional when using Vault Agent)
+    pub token: Option<String>,
     /// Transit secrets engine mount path
     pub mount_path: String,
     /// Key type specification
     pub key_type: KeyType,
+    /// Whether to use Vault Agent sidecar mode (token injected by proxy)
+    pub agent_mode: bool,
 }
 
 /// Vault Key Type specification
@@ -33,12 +35,39 @@ pub enum KeyType {
 
 impl VaultConfig {
     /// Create configuration from environment variables
+    /// 
+    /// # Vault Agent Sidecar Mode
+    /// 
+    /// Set `VAULT_AGENT_MODE=true` to use Vault Agent sidecar pattern in Kubernetes:
+    /// - The app connects to a local Vault Agent proxy (e.g., `http://127.0.0.1:8100`)
+    /// - The agent automatically injects `X-Vault-Token` header in all requests
+    /// - No `VAULT_TOKEN` environment variable is required
+    /// - Token rotation and renewal is handled automatically by the agent
+    /// 
+    /// Example:
+    /// ```bash
+    /// export VAULT_ADDR="http://127.0.0.1:8100"
+    /// export VAULT_AGENT_MODE="true"
+    /// # VAULT_TOKEN not needed - injected by agent
+    /// ```
     pub fn from_env() -> Result<Self, VaultError> {
         let addr = env::var("VAULT_ADDR")
             .map_err(|_| VaultError::Configuration("VAULT_ADDR environment variable not set".to_string()))?;
 
-        let token = env::var("VAULT_TOKEN")
-            .map_err(|_| VaultError::Configuration("VAULT_TOKEN environment variable not set".to_string()))?;
+        // Check if using Vault Agent sidecar mode
+        let agent_mode = env::var("VAULT_AGENT_MODE")
+            .unwrap_or_else(|_| "false".to_string())
+            .to_lowercase() == "true";
+
+        // Token is optional when using Vault Agent
+        let token = if agent_mode {
+            None
+        } else {
+            Some(env::var("VAULT_TOKEN")
+                .map_err(|_| VaultError::Configuration(
+                    "VAULT_TOKEN environment variable not set. Use VAULT_AGENT_MODE=true if using Vault Agent sidecar".to_string()
+                ))?)
+        };
 
         let mount_path = env::var("VAULT_MOUNT_PATH")
             .unwrap_or_else(|_| "transit".to_string());
@@ -51,6 +80,7 @@ impl VaultConfig {
             token,
             mount_path,
             key_type,
+            agent_mode,
         })
     }
 
@@ -58,9 +88,24 @@ impl VaultConfig {
     pub fn new(addr: String, token: String) -> Self {
         Self {
             addr,
-            token,
+            token: Some(token),
             mount_path: "transit".to_string(),
             key_type: KeyType::EcdsaP256,
+            agent_mode: false,
+        }
+    }
+
+    /// Create new configuration for Vault Agent sidecar mode
+    /// 
+    /// Use this when deploying with Vault Agent in Kubernetes.
+    /// The agent will automatically inject authentication tokens.
+    pub fn new_agent_mode(addr: String) -> Self {
+        Self {
+            addr,
+            token: None,
+            mount_path: "transit".to_string(),
+            key_type: KeyType::EcdsaP256,
+            agent_mode: true,
         }
     }
 
@@ -84,7 +129,17 @@ impl VaultConfig {
 
     /// Set Vault token
     pub fn with_token(mut self, token: String) -> Self {
-        self.token = token;
+        self.token = Some(token);
+        self.agent_mode = false;
+        self
+    }
+    
+    /// Enable Vault Agent sidecar mode (no token needed)
+    pub fn with_agent_mode(mut self, enabled: bool) -> Self {
+        self.agent_mode = enabled;
+        if enabled {
+            self.token = None;
+        }
         self
     }
 }

@@ -26,9 +26,14 @@ impl VaultClient {
     pub async fn get(&self, path: &str) -> Result<Value, VaultError> {
         let url = format!("{}/v1/{}", self.config.addr, path);
         
-        let response = self.client
-            .get(&url)
-            .header("X-Vault-Token", &self.config.token)
+        let mut request = self.client.get(&url);
+        
+        // Only add token header if not using Vault Agent mode
+        if let Some(ref token) = self.config.token {
+            request = request.header("X-Vault-Token", token);
+        }
+        
+        let response = request
             .send()
             .await
             .map_err(VaultError::Http)?;
@@ -46,11 +51,17 @@ impl VaultClient {
     pub async fn post(&self, path: &str, data: &Value) -> Result<Value, VaultError> {
         let url = format!("{}/v1/{}", self.config.addr, path);
         
-        let response = self.client
+        let mut request = self.client
             .post(&url)
-            .header("X-Vault-Token", &self.config.token)
             .header("Content-Type", "application/json")
-            .json(data)
+            .json(data);
+        
+        // Only add token header if not using Vault Agent mode
+        if let Some(ref token) = self.config.token {
+            request = request.header("X-Vault-Token", token);
+        }
+        
+        let response = request
             .send()
             .await
             .map_err(VaultError::Http)?;
@@ -68,9 +79,14 @@ impl VaultClient {
     pub async fn delete(&self, path: &str) -> Result<(), VaultError> {
         let url = format!("{}/v1/{}", self.config.addr, path);
         
-        let response = self.client
-            .delete(&url)
-            .header("X-Vault-Token", &self.config.token)
+        let mut request = self.client.delete(&url);
+        
+        // Only add token header if not using Vault Agent mode
+        if let Some(ref token) = self.config.token {
+            request = request.header("X-Vault-Token", token);
+        }
+        
+        let response = request
             .send()
             .await
             .map_err(VaultError::Http)?;
