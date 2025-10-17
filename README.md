@@ -199,29 +199,6 @@ VAULT_ADDR=http://127.0.0.1:8100 VAULT_AGENT_MODE=true cargo run --package vault
 - [x] `KeyGet` - Retrieve public keys
 - [x] `Signer` - Low-level signing interface
 
-### ✅ AWS KMS Adapter
-- [x] Environment-based configuration
-- [x] Key generation with ECC_NIST_P256 (default)
-- [x] ECDSA_SHA_256 signatures
-- [x] Key existence checking
-- [x] Public key retrieval
-- [x] Scheduled key deletion
-- [x] IAM integration
-- [x] CloudTrail audit support
-
-### ✅ HashiCorp Vault Adapter
-- [x] Environment-based configuration
-- [x] Key generation with ECDSA P-256 (secp256r1)
-- [x] ECDSA signatures with Transit secrets engine
-- [x] Key existence checking
-- [x] Public key retrieval in DER format
-- [x] Key deletion with proper policies
-- [x] Docker containerization for local testing
-- [x] IOTA testnet transaction support
-- [x] Vault Agent sidecar mode for Kubernetes
-- [x] ServiceAccount-based authentication
-- [x] Automatic token rotation support
-
 ### ✅ Builder Pattern
 - [x] Auto-detection of available adapters
 - [x] Manual adapter configuration
@@ -238,11 +215,9 @@ VAULT_ADDR=http://127.0.0.1:8100 VAULT_AGENT_MODE=true cargo run --package vault
 
 The architecture supports additional adapters:
 
-- **File System Storage** - For development and testing
-- **DFNS Service** - Multi-party computation
-- **Azure Key Vault** - Microsoft cloud HSM
-- **Google Cloud KMS** - Google cloud key management
-- **Hardware Security Modules** - Direct HSM integration
+- **File System Storage** (For development and testing)
+- **DFNS Service** 
+- **Turnkey Service** 
 
 ## 🔒 Security Considerations
 
@@ -263,25 +238,9 @@ The system provides atomic 'permissions' such as `KeyRead`, `KeySign`, etc., all
 ### Explicit Boundaries Principle
 Clear interface definitions separate provider code from user code, emphasizing responsibility boundaries.
 
-## 🤝 Contributing
-
-1. Follow the hexagonal architecture principles
-2. All comments must be in English
-3. Implement comprehensive tests for new adapters
-4. Update documentation for new features
-5. Follow existing code style and conventions
-
 ## 📜 License
 
 Apache-2.0
-
-## 🏢 Enterprise Roadmap
-
-- **Multi-tenancy support** (planned)
-- **Key rotation mechanisms** (planned)  
-- **Compliance reporting** (planned)
-- **Performance monitoring** (planned)
-- **Policy engines** (planned)
 
 ---
 

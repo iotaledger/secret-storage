@@ -210,25 +210,8 @@ All secret-storage-core traits are fully implemented for HashiCorp Vault:
 # Start Vault with Docker Compose
 docker-compose -f docker-compose.vault.yml up -d
 
-# Check status
-docker-compose -f docker-compose.vault.yml ps
-
-# View logs
-docker-compose -f docker-compose.vault.yml logs -f vault
-
 # Stop and clean up
 docker-compose -f docker-compose.vault.yml down
-```
-
-## 🧪 Testing
-
-### **Unit Tests**
-```bash
-# Test Vault adapter
-cargo test --package vault-adapter
-
-# Test storage factory (includes all adapters)
-cargo test --package storage-factory
 ```
 
 ### **Integration Tests**
@@ -244,22 +227,6 @@ cargo run --package storage-factory --example iota_vault_demo
 
 ## 🚀 Production Deployment
 
-### **Standard Vault Configuration**
-```hcl
-# Enable Transit secrets engine
-vault secrets enable -path=iota-transit transit
-
-# Create policy for IOTA operations
-vault policy write iota-policy - <<EOF
-path "iota-transit/keys/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
-}
-path "iota-transit/sign/*" {
-  capabilities = ["update"]
-}
-EOF
-```
-
 ### **Environment Configuration (Standard Mode)**
 ```bash
 # Production environment
@@ -271,179 +238,6 @@ export VAULT_MOUNT_PATH="iota-transit"
 ### **Kubernetes Deployment with Vault Agent Sidecar**
 
 The recommended approach for Kubernetes deployments uses the Vault Agent sidecar pattern for enhanced security.
-
-**Benefits:**
-- ✅ No long-lived secrets in pods
-- ✅ Automatic token rotation (e.g., TTL 1h)
-- ✅ ServiceAccount-based authentication
-- ✅ Reduced attack surface
-- ✅ Zero secret management in app code
-
-**Step 1: Enable Kubernetes Authentication in Vault**
-
-```bash
-# Enable Kubernetes auth method
-vault auth enable kubernetes
-
-# Configure Kubernetes authentication
-vault write auth/kubernetes/config \
-    kubernetes_host="https://kubernetes.default.svc" \
-    kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
-    token_reviewer_jwt=@/var/run/secrets/kubernetes.io/serviceaccount/token
-
-# Create role for IOTA app
-vault write auth/kubernetes/role/iota-app \
-    bound_service_account_names=iota-app \
-    bound_service_account_namespaces=iota \
-    policies=iota-policy \
-    ttl=1h
-```
-
-**Step 2: Create Vault Agent ConfigMap**
-
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: vault-agent-config
-  namespace: iota
-data:
-  agent.hcl: |
-    # Auto-authentication using Kubernetes ServiceAccount
-    auto_auth {
-      method "kubernetes" {
-        mount_path = "auth/kubernetes"
-        config = {
-          role = "iota-app"
-        }
-      }
-      
-      sink "file" {
-        config = {
-          path = "/vault/secrets/token"
-        }
-      }
-    }
-
-    # API proxy with automatic token injection
-    api_proxy {
-      use_auto_auth_token = true
-    }
-
-    # Local listener for app connections
-    listener "tcp" {
-      address = "127.0.0.1:8100"
-      tls_disable = true
-    }
-
-    # Vault server address
-    vault {
-      address = "https://vault.company.com:8200"
-    }
-```
-
-**Step 3: Deploy Application with Sidecar**
-
-```yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: iota-app
-  namespace: iota
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: iota-app
-  namespace: iota
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: iota-app
-  template:
-    metadata:
-      labels:
-        app: iota-app
-    spec:
-      serviceAccountName: iota-app
-      
-      containers:
-      # Main application container
-      - name: app
-        image: iota-app:latest
-        env:
-        # Point to local Vault Agent proxy
-        - name: VAULT_ADDR
-          value: "http://127.0.0.1:8100"
-        # Enable Vault Agent mode (no token needed)
-        - name: VAULT_AGENT_MODE
-          value: "true"
-        - name: VAULT_MOUNT_PATH
-          value: "iota-transit"
-        ports:
-        - containerPort: 8080
-        resources:
-          requests:
-            cpu: 100m
-            memory: 128Mi
-          limits:
-            cpu: 500m
-            memory: 512Mi
-      
-      # Vault Agent sidecar
-      - name: vault-agent
-        image: hashicorp/vault:1.15
-        args:
-        - "agent"
-        - "-config=/vault/config/agent.hcl"
-        env:
-        - name: VAULT_ADDR
-          value: "https://vault.company.com:8200"
-        volumeMounts:
-        - name: vault-config
-          mountPath: /vault/config
-        - name: vault-secrets
-          mountPath: /vault/secrets
-        resources:
-          requests:
-            cpu: 50m
-            memory: 64Mi
-          limits:
-            cpu: 200m
-            memory: 256Mi
-      
-      volumes:
-      - name: vault-config
-        configMap:
-          name: vault-agent-config
-      - name: vault-secrets
-        emptyDir:
-          medium: Memory
-```
-
-**Step 4: Deploy and Verify**
-
-```bash
-# Apply all resources
-kubectl apply -f vault-agent-configmap.yaml
-kubectl apply -f iota-app-deployment.yaml
-
-# Check pod status
-kubectl get pods -n iota
-
-# Verify both containers are running
-kubectl describe pod -n iota <pod-name>
-
-# Check application logs
-kubectl logs -n iota <pod-name> -c app
-
-# Check Vault Agent logs
-kubectl logs -n iota <pod-name> -c vault-agent
-
-# Test the application
-kubectl port-forward -n iota <pod-name> 8080:8080
-```
 
 **Application Code (No Changes Required!):**
 
@@ -464,21 +258,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 ```
-
-## 📊 Performance Characteristics
-
-- **Key Generation**: ~200-500ms (network dependent)
-- **Signing Operations**: ~100-300ms (network dependent)
-- **Concurrent Operations**: Supported (Vault handles concurrency)
-- **Scalability**: Enterprise-grade with Vault clustering
-
-## 🔒 Security Features
-
-- **Hardware Security**: Keys secured in Vault's encryption boundary
-- **Audit Logging**: Complete audit trail through Vault logs
-- **Access Control**: Fine-grained policies and authentication
-- **Network Security**: TLS encryption for all communications
-- **Key Isolation**: Strong isolation between different applications/tenants
 
 ## 🎉 Summary
 
