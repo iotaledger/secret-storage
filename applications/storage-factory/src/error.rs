@@ -15,8 +15,8 @@ pub enum StorageFactoryError {
     UnsupportedStorageType(String),
 }
 
-impl From<StorageFactoryError> for secret_storage_core::Error {
+impl From<StorageFactoryError> for secret_storage::Error {
     fn from(err: StorageFactoryError) -> Self {
-        secret_storage_core::Error::Other(anyhow::anyhow!(err))
+        secret_storage::Error::Other(anyhow::anyhow!(err))
     }
 }

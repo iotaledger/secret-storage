@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use async_trait::async_trait;
-use secret_storage_core::{
+use secret_storage::{
     KeyDelete, KeyExist, KeyGenerate, KeyGet, KeySign, Result, SignatureScheme,
 };
 use uuid::Uuid;
@@ -104,7 +104,7 @@ impl KeySign<VaultSignatureScheme, String> for VaultStorage {
     fn get_signer(
         &self,
         key_id: &String,
-    ) -> Result<impl secret_storage_core::Signer<VaultSignatureScheme, KeyId = String>> {
+    ) -> Result<impl secret_storage::Signer<VaultSignatureScheme, KeyId = String>> {
         // Validate key name
         validate_key_name(key_id)?;
 

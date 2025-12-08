@@ -7,7 +7,7 @@ use aws_sdk_kms::Client as KmsClient;
 use std::env;
 
 use crate::AwsKmsConfig;
-use secret_storage_core::Result;
+use secret_storage::Result;
 
 /// Create KMS client from config
 pub async fn create_kms_client_from_config(config: &AwsKmsConfig) -> Result<KmsClient> {
@@ -19,7 +19,9 @@ pub async fn create_kms_client_from_config(config: &AwsKmsConfig) -> Result<KmsC
 }
 
 /// Create KMS client with AWS profile support
-pub async fn create_kms_client_with_profile(profile_name: Option<&str>) -> Result<(KmsClient, AwsKmsConfig)> {
+pub async fn create_kms_client_with_profile(
+    profile_name: Option<&str>,
+) -> Result<(KmsClient, AwsKmsConfig)> {
     let mut builder = aws_config::defaults(aws_config::BehaviorVersion::latest());
 
     if let Some(profile) = profile_name {
@@ -41,4 +43,3 @@ pub async fn create_kms_client_with_profile(profile_name: Option<&str>) -> Resul
 
     Ok((client, config))
 }
-

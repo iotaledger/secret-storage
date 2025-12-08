@@ -28,7 +28,7 @@ use iota_types::{
     base_types::IotaAddress, programmable_transaction_builder::ProgrammableTransactionBuilder,
     transaction::TransactionData,
 };
-use secret_storage_core::{KeySign, Signer};
+use secret_storage::{KeySign, Signer};
 use shared_crypto::intent::{Intent, IntentMessage};
 use std::error::Error;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -54,7 +54,7 @@ async fn generate_dynamic_vault_key(
     storage: &vault_adapter::VaultStorage,
     key_name: String,
 ) -> Result<(String, Vec<u8>), Box<dyn Error>> {
-    use secret_storage_core::KeyGenerate;
+    use secret_storage::KeyGenerate;
 
     // Create options with the specified key name
     let options = vault_adapter::VaultKeyOptions {

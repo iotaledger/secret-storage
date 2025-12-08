@@ -3,10 +3,10 @@
 
 //! Key generation utilities
 
-use std::time::{SystemTime, UNIX_EPOCH};
-use std::error::Error;
-use secret_storage_core::KeyGenerate;
 use aws_kms_adapter::{AwsKmsKeyOptions, AwsKmsStorage};
+use secret_storage::KeyGenerate;
+use std::error::Error;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Generate a dynamic key alias with timestamp in the format: kms-demo-{timestamp}
 pub fn generate_key_alias() -> String {
@@ -28,7 +28,10 @@ pub async fn generate_dynamic_key(
         alias: Some(alias),
         tags: vec![
             ("Project".to_string(), "IOTA-SecretStorage".to_string()),
-            ("KeyType".to_string(), "secp256r1".to_string()),
+            (
+                "KeyType".to_string(),
+                "KeySpec::EccNistEdwards25519".to_string(),
+            ),
             ("Purpose".to_string(), "IOTADemo".to_string()),
             ("CreatedBy".to_string(), "iota_kms_demo".to_string()),
         ],

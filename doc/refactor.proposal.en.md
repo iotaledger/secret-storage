@@ -134,7 +134,7 @@ KMS_KEY_ID=arn:aws:kms:eu-west-1:304431203043:key/12345678-1234-1234-1234-123456
 
 ```rust
 use storage_factory::StorageBuilder;
-use secret_storage_core::{KeyGenerate, KeySign, Signer};
+use secret_storage::{KeyGenerate, KeySign, Signer};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -186,7 +186,7 @@ let storage = AwsKmsStorage::with_profile(profile.as_deref()).await?;
 ```rust
 use iota_sdk::{IotaClient, types::TransactionData};
 use storage_factory::StorageBuilder;
-use secret_storage_core::{KeySign, Signer};
+use secret_storage::{KeySign, Signer};
 
 async fn sign_iota_transaction(
     client: &IotaClient,

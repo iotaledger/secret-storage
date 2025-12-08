@@ -14,7 +14,7 @@
 //! ```
 
 use aws_kms_adapter::{AwsKmsKeyOptions, AwsKmsStorage};
-use secret_storage_core::{KeyDelete, KeyExist, KeyGenerate};
+use secret_storage::{KeyDelete, KeyExist, KeyGenerate};
 use std::env;
 
 

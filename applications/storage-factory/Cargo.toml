@@ -11,7 +11,7 @@ description = "Builder pattern and factory for selecting and configuring secret 
 keywords = ["crypto", "storage", "factory", "builder", "adapter"]
 
 [dependencies]
-secret-storage-core = { path = "../../core/secret-storage" }
+secret-storage = { path = "../../core/secret-storage" }
 aws-kms-adapter = { path = "../../adapters/aws-kms-adapter", optional = true }
 vault-adapter = { path = "../../adapters/vault-adapter", optional = true }
 serde = { version = "1.0", features = ["derive"] }
@@ -28,7 +28,7 @@ iota-types = { git = "https://github.com/iotaledger/iota.git", package = "iota-t
 iota-config = { git = "https://github.com/iotaledger/iota.git", package = 'iota-config', tag = "v1.6.1" }
 iota-json-rpc-types = { git = "https://github.com/iotaledger/iota.git", package = 'iota-json-rpc-types', tag = "v1.6.1" }
 move_core_types = { git = "https://github.com/iotaledger/iota.git", package = "move-core-types", tag = "v1.6.1" }
-secret-storage = { git = "https://github.com/iotaledger/secret-storage", tag = "v0.3.0" }
+# secret-storage = { git = "https://github.com/iotaledger/secret-storage", tag = "v0.3.0" }
 shared-crypto = { git = "https://github.com/iotaledger/iota.git", package = "shared-crypto", tag = "v1.6.1" }
 blake2 = "0.10"
 sha2 = "0.10"

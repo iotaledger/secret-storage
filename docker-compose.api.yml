@@ -37,7 +37,7 @@ services:
       ENVIRONMENT: development
 
       # Logging
-      RUST_LOG: info,hv_iota_e2e_test=debug,secret_storage_core=debug
+      RUST_LOG: info,hv_iota_e2e_test=debug,secret_storage=debug
 
     # Run the transaction API
     command: ["./hv-iota-e2e-test"]

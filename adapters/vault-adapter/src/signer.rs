@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use async_trait::async_trait;
-use secret_storage_core::{Result, Signer};
+use secret_storage::{Result, Signer};
 use crate::{
     VaultSignatureScheme, VaultError,
     utils::{vault_operations::{sign_data, get_public_key}, vault_client::VaultClient},

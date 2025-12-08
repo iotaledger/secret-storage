@@ -22,7 +22,7 @@ use iota_types::{
     base_types::IotaAddress, programmable_transaction_builder::ProgrammableTransactionBuilder,
     transaction::TransactionData,
 };
-use secret_storage_core::{KeySign, Signer};
+use secret_storage::{KeySign, Signer};
 use shared_crypto::intent::{Intent, IntentMessage};
 use std::error::Error;
 use storage_factory::StorageBuilder;

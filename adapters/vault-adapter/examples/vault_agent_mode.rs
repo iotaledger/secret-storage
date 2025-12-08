@@ -30,7 +30,7 @@
 //! cargo run --package vault-adapter --example vault_agent_mode
 //! ```
 
-use secret_storage_core::{KeyDelete, KeyGenerate, KeySign, Signer};
+use secret_storage::{KeyDelete, KeyGenerate, KeySign, Signer};
 use std::env;
 use vault_adapter::{VaultConfig, VaultKeyOptions, VaultStorage};
 

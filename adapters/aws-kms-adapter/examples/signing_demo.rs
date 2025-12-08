@@ -19,8 +19,8 @@
 //! AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... AWS_REGION=eu-west-1 cargo run --example signing_demo
 //! ```
 
-use aws_kms_adapter::{AwsKmsKeyOptions, AwsKmsStorage};
-use secret_storage_core::{KeyGenerate, KeyGet, KeySign, Signer};
+use aws_kms_adapter::{AwsKmsKeyOptions, AwsKmsSignatureScheme, AwsKmsStorage};
+use secret_storage::{KeyGenerate, KeyGet, KeySign, Signer};
 use std::env;
 
 const ALIAS: &str = "signing-demo";
@@ -113,7 +113,10 @@ async fn demonstrate_signing(
 
     println!("📝 Getting signer instance for key: {}", key_id);
     let key_string = key_id.to_string();
-    let signer = storage.get_signer(&key_string)?;
+    let signer = <AwsKmsStorage as KeySign<AwsKmsSignatureScheme, String>>::get_signer(
+        &storage,
+        &key_string,
+    )?;
 
     println!("🔍 Signer created successfully!");
     println!("   📌 Signer Key ID: {}", signer.key_id());
@@ -175,7 +178,10 @@ async fn demonstrate_signer_public_key(
 
     println!("📝 Getting signer instance for key: {}", key_id);
     let key_string = key_id.to_string();
-    let signer = storage.get_signer(&key_string)?;
+    let signer = <AwsKmsStorage as KeySign<AwsKmsSignatureScheme, String>>::get_signer(
+        &storage,
+        &key_string,
+    )?;
 
     println!("🔍 Retrieving public key via signer...");
     let public_key_from_signer = signer.public_key().await?;
@@ -195,7 +201,6 @@ async fn demonstrate_signer_public_key(
 
     Ok(())
 }
-
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

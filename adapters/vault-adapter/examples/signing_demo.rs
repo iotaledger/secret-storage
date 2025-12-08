@@ -28,7 +28,7 @@
 //! VAULT_ADDR=http://localhost:8200 VAULT_TOKEN=dev-token VAULT_MOUNT_PATH="transit" cargo run --package vault-adapter --example signing_demo
 //! ```
 
-use secret_storage_core::{KeyDelete, KeyExist, KeyGenerate, KeySign, Signer};
+use secret_storage::{KeyDelete, KeyExist, KeyGenerate, KeySign, Signer};
 use std::env;
 use std::time::Instant;
 use vault_adapter::{VaultKeyOptions, VaultStorage};

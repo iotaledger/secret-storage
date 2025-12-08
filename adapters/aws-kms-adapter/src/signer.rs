@@ -2,18 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use async_trait::async_trait;
-use aws_sdk_kms::{types::SigningAlgorithmSpec, Client as KmsClient};
-use secret_storage_core::{Result, Signer};
+pub use aws_sdk_kms::types::SigningAlgorithmSpec;
+use aws_sdk_kms::Client as KmsClient;
+use secret_storage::{Result, Signer};
 
-use crate::AwsKmsSignatureScheme;
 use crate::utils::key_utils::is_alias;
+use crate::AwsKmsSignatureScheme;
 
 /// AWS KMS signer implementation
 pub struct AwsKmsSigner {
-    client: KmsClient,
+    pub(crate) client: KmsClient,
     alias: String,
     kms_key_id: String,
-    signing_algorithm: SigningAlgorithmSpec,
+    pub(crate) signing_algorithm: SigningAlgorithmSpec,
 }
 
 impl AwsKmsSigner {
@@ -46,7 +47,7 @@ impl AwsKmsSigner {
 
     /// Get the appropriate key identifier for AWS KMS API calls
     /// Adds 'alias/' prefix for user aliases as required by AWS API
-    fn get_api_key_id(&self) -> String {
+    pub(crate) fn get_api_key_id(&self) -> String {
         if !self.alias.is_empty() {
             format!("alias/{}", self.alias)
         } else {
@@ -55,43 +56,81 @@ impl AwsKmsSigner {
     }
 }
 
+pub async fn sign(
+    client: &KmsClient,
+    key_id: &str,
+    data: &Vec<u8>,
+    signing_algorithm: &SigningAlgorithmSpec,
+) -> Result<Vec<u8>> {
+    // Perform AWS KMS signing operation
+    let sign_response = client
+        .sign()
+        .key_id(key_id)
+        .message(aws_sdk_kms::primitives::Blob::new(data.clone()))
+        .message_type(aws_sdk_kms::types::MessageType::Raw)
+        .signing_algorithm(signing_algorithm.clone())
+        .send()
+        .await
+        .map_err(|e| {
+            secret_storage::Error::Other(anyhow::anyhow!(
+                "AWS KMS signing failed for key {}: {}",
+                key_id,
+                e.as_service_error().unwrap().meta()
+            ))
+        })?;
+
+    let signature = sign_response
+        .signature
+        .ok_or_else(|| {
+            secret_storage::Error::Other(anyhow::anyhow!("No signature returned from AWS KMS"))
+        })?
+        .into_inner();
+
+    Ok(signature)
+}
+
 #[cfg_attr(not(feature = "send-sync-storage"), async_trait(?Send))]
 #[cfg_attr(feature = "send-sync-storage", async_trait)]
 impl Signer<AwsKmsSignatureScheme> for AwsKmsSigner {
     type KeyId = String;
 
     async fn sign(&self, data: &Vec<u8>) -> Result<Vec<u8>> {
-        // Get the appropriate key identifier for AWS KMS API
-        let key_id = self.get_api_key_id();
+        sign(
+            &self.client,
+            &self.get_api_key_id(),
+            data,
+            &self.signing_algorithm,
+        )
+        .await
+        // // Get the appropriate key identifier for AWS KMS API
+        // let key_id = self.get_api_key_id();
 
-        // Perform AWS KMS signing operation
-        let sign_response = self
-            .client
-            .sign()
-            .key_id(&key_id)
-            .message(aws_sdk_kms::primitives::Blob::new(data.clone()))
-            .message_type(aws_sdk_kms::types::MessageType::Raw)
-            .signing_algorithm(self.signing_algorithm.clone())
-            .send()
-            .await
-            .map_err(|e| {
-                secret_storage_core::Error::Other(anyhow::anyhow!(
-                    "AWS KMS signing failed for key {}: {}",
-                    key_id, e
-                ))
-            })?;
+        // // Perform AWS KMS signing operation
+        // let sign_response = self
+        //     .client
+        //     .sign()
+        //     .key_id(&key_id)
+        //     .message(aws_sdk_kms::primitives::Blob::new(data.clone()))
+        //     .message_type(aws_sdk_kms::types::MessageType::Raw)
+        //     .signing_algorithm(self.signing_algorithm.clone())
+        //     .send()
+        //     .await
+        //     .map_err(|e| {
+        //         secret_storage::Error::Other(anyhow::anyhow!(
+        //             "AWS KMS signing failed for key {}: {}",
+        //             key_id,
+        //             e.as_service_error().unwrap().meta()
+        //         ))
+        //     })?;
 
-        let signature = sign_response
-            .signature
-            .ok_or_else(|| {
-                secret_storage_core::Error::Other(anyhow::anyhow!(
-                    "No signature returned from AWS KMS"
-                ))
-            })?
-            .into_inner();
+        // let signature = sign_response
+        //     .signature
+        //     .ok_or_else(|| {
+        //         secret_storage::Error::Other(anyhow::anyhow!("No signature returned from AWS KMS"))
+        //     })?
+        //     .into_inner();
 
-
-        Ok(signature)
+        // Ok(signature)
     }
 
     async fn public_key(&self) -> Result<Vec<u8>> {
@@ -106,40 +145,49 @@ impl Signer<AwsKmsSignatureScheme> for AwsKmsSigner {
             .send()
             .await
             .map_err(|e| {
-                secret_storage_core::Error::Other(anyhow::anyhow!(
+                secret_storage::Error::Other(anyhow::anyhow!(
                     "Failed to get public key from AWS KMS for key {}: {}",
-                    key_id, e
+                    key_id,
+                    e
                 ))
             })?;
 
         let public_key_der = public_key_response
             .public_key
             .ok_or_else(|| {
-                secret_storage_core::Error::Other(anyhow::anyhow!(
-                    "No public key returned from AWS KMS"
-                ))
+                secret_storage::Error::Other(anyhow::anyhow!("No public key returned from AWS KMS"))
             })?
             .into_inner();
 
+        // TODO: skip verification for now, as types might vary
         // Verify it's the expected key type (secp256r1)
         if let Some(key_spec) = public_key_response.key_spec {
-            if key_spec != aws_sdk_kms::types::KeySpec::EccNistP256 {
-                return Err(secret_storage_core::Error::Other(anyhow::anyhow!(
-                    "Key {} is not secp256r1, got spec: {:?}",
-                    key_id, key_spec
-                )));
-            }
+            // if key_spec != aws_sdk_kms::types::KeySpec::EccNistP256 {
+            //     return Err(secret_storage::Error::Other(anyhow::anyhow!(
+            //         "Key {} is not secp256r1, got spec: {:?}",
+            //         key_id,
+            //         key_spec
+            //     )));
+            // }
+            // if key_spec != aws_sdk_kms::types::KeySpec::EccNistEdwards25519 {
+            //     return Err(secret_storage::Error::Other(anyhow::anyhow!(
+            //         "Key {} is not EccNistEdwards25519, got spec: {:?}",
+            //         key_id,
+            //         key_spec
+            //     ))
+            //     .into());
+            // }
         }
 
         if let Some(key_usage) = public_key_response.key_usage {
             if key_usage != aws_sdk_kms::types::KeyUsageType::SignVerify {
-                return Err(secret_storage_core::Error::Other(anyhow::anyhow!(
+                return Err(secret_storage::Error::Other(anyhow::anyhow!(
                     "Key {} is not for signing, got usage: {:?}",
-                    key_id, key_usage
+                    key_id,
+                    key_usage
                 )));
             }
         }
-
 
         Ok(public_key_der)
     }

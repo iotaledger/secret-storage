@@ -21,23 +21,18 @@ pub enum AwsKmsError {
     General(String),
 }
 
-impl From<AwsKmsError> for secret_storage_core::Error {
+impl From<AwsKmsError> for secret_storage::Error {
     fn from(err: AwsKmsError) -> Self {
         match err {
-            AwsKmsError::KeyNotFound(id) => secret_storage_core::Error::KeyNotFound(id),
-            AwsKmsError::KmsService(e) => {
-                secret_storage_core::Error::StoreDisconnected(e.to_string())
+            AwsKmsError::KeyNotFound(id) => secret_storage::Error::KeyNotFound(id),
+            AwsKmsError::KmsService(e) => secret_storage::Error::StoreDisconnected(e.to_string()),
+            AwsKmsError::Configuration(e) => secret_storage::Error::Other(anyhow::anyhow!(e)),
+            AwsKmsError::UnsupportedKeyUsage(_e) => secret_storage::Error::InvalidOptions,
+            AwsKmsError::InvalidKeyFormat(e) => secret_storage::Error::Other(anyhow::anyhow!(e)),
+            AwsKmsError::MissingEnvVar(e) => {
+                secret_storage::Error::Other(anyhow::anyhow!("Missing environment variable: {}", e))
             }
-            AwsKmsError::Configuration(e) => secret_storage_core::Error::Other(anyhow::anyhow!(e)),
-            AwsKmsError::UnsupportedKeyUsage(_e) => secret_storage_core::Error::InvalidOptions,
-            AwsKmsError::InvalidKeyFormat(e) => {
-                secret_storage_core::Error::Other(anyhow::anyhow!(e))
-            }
-            AwsKmsError::MissingEnvVar(e) => secret_storage_core::Error::Other(anyhow::anyhow!(
-                "Missing environment variable: {}",
-                e
-            )),
-            AwsKmsError::General(e) => secret_storage_core::Error::Other(anyhow::anyhow!(e)),
+            AwsKmsError::General(e) => secret_storage::Error::Other(anyhow::anyhow!(e)),
         }
     }
 }

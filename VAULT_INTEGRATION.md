@@ -63,7 +63,7 @@ cargo run --package storage-factory --example iota_vault_demo
 
 ```rust
 use storage_factory::StorageBuilder;
-use secret_storage_core::{KeyGenerate, KeySign, Signer};
+use secret_storage::{KeyGenerate, KeySign, Signer};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -95,7 +95,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```rust
 use vault_adapter::{VaultConfig, VaultStorage};
-use secret_storage_core::{KeyGenerate, KeySign, Signer};
+use secret_storage::{KeyGenerate, KeySign, Signer};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -181,12 +181,12 @@ The Vault adapter follows the same hexagonal architecture as the AWS KMS adapter
 
 ### **Error Handling**
 - Comprehensive error types for different failure scenarios
-- Proper error conversion to secret-storage-core Error enum
+- Proper error conversion to secret-storage Error enum
 - Clear error messages with troubleshooting hints
 
 ### **Core Traits Implementation**
 
-All secret-storage-core traits are fully implemented for HashiCorp Vault:
+All secret-storage traits are fully implemented for HashiCorp Vault:
 
 | **Trait** | **Implementation** | **Description** |
 |-----------|-------------------|-----------------|
@@ -449,7 +449,7 @@ kubectl port-forward -n iota <pod-name> 8080:8080
 
 ```rust
 use vault_adapter::VaultStorage;
-use secret_storage_core::{KeyGenerate, Signer};
+use secret_storage::{KeyGenerate, Signer};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

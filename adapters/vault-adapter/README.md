@@ -102,7 +102,7 @@ let storage = VaultStorage::new(config).await?;
 
 ```rust
 use vault_adapter::{VaultStorage, VaultKeyOptions};
-use secret_storage_core::{KeyGenerate, KeySign, KeyDelete, Signer};
+use secret_storage::{KeyGenerate, KeySign, KeyDelete, Signer};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

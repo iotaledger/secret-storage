@@ -1,5 +1,5 @@
 [package]
-name = "secret-storage-core"
+name = "secret-storage"
 version = "0.3.0"
 edition = "2021"
 authors = ["IOTA Stiftung"]
@@ -18,4 +18,5 @@ async-trait = "0.1"
 
 [features]
 default = ["send-sync-storage"]
+signature-scheme-raw = []
 send-sync-storage = []

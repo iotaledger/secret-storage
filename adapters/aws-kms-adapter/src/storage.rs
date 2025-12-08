@@ -2,30 +2,27 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use async_trait::async_trait;
-use aws_sdk_kms::Client as KmsClient;
-use secret_storage_core::{
-    KeyDelete, KeyExist, KeyGenerate, KeyGet, KeySign, Result, SignatureScheme,
-};
+use aws_sdk_kms::{types::KeySpec as AwsKeySpec, Client as KmsClient};
+use secret_storage::{KeyDelete, KeyExist, KeyGenerate, KeyGet, KeySign, Result, SignatureScheme};
 use uuid::Uuid;
 
 use crate::{
-    AwsKmsConfig, AwsKmsError, AwsKmsSigner,
-    utils::{
-        aws_client::{create_kms_client_from_config, create_kms_client_with_profile},
-        key_utils::{identify_key_type, is_alias},
-        kms_operations::{resolve_alias_to_key_id, check_key_exists_and_enabled, delete_alias_if_exists, schedule_key_deletion},
-    },
+    check_key_exists_and_enabled, create_kms_client_from_config, create_kms_client_with_profile,
+    delete_alias_if_exists, identify_key_type, is_alias, resolve_alias_to_key_id,
+    schedule_key_deletion, AwsKmsConfig, AwsKmsError, AwsKmsSigner, KeySpec as AdapterKeySpec,
 };
 
 /// AWS KMS storage implementation
 pub struct AwsKmsStorage {
+    #[cfg(not(feature = "signature-scheme-raw"))]
     client: KmsClient,
+    #[cfg(feature = "signature-scheme-raw")]
+    pub client: KmsClient,
     #[allow(dead_code)]
     config: AwsKmsConfig,
 }
 
 impl AwsKmsStorage {
-
     /// Create new AWS KMS storage
     pub async fn new(config: AwsKmsConfig) -> Result<Self> {
         let client = create_kms_client_from_config(&config).await?;
@@ -43,7 +40,6 @@ impl AwsKmsStorage {
         let (client, config) = create_kms_client_with_profile(profile_name).await?;
         Ok(Self { client, config })
     }
-
 }
 
 /// Generic signature scheme for AWS KMS
@@ -64,8 +60,32 @@ pub struct AwsKmsKeyOptions {
     pub description: Option<String>,
     /// Alias
     pub alias: Option<String>,
+    // TODO: consider using a map like structure, as representation is AWS KSM uses unique keys
     /// Optional tags
     pub tags: Vec<(String, String)>,
+    // TODO: make mandatory?
+    /// Optional KeySpec to use
+    pub key_spec: Option<AdapterKeySpec>,
+}
+
+// impl AwsKmsKeyOptions {
+//     pub fn with_key_spec(mut self, key_spec: KeySpec) -> Self {
+//         self.key_spec = Some(key_spec);
+//         self
+//     }
+// }
+
+// todo: remove after updates
+pub fn get_test_aws_key_id(key_spec: &AdapterKeySpec) -> Result<&'static str> {
+    match key_spec {
+        AdapterKeySpec::EccNistEdwards25519 => Ok("6863eed8-b746-49da-b548-5f431da3ca05"), // ECC_NIST_EDWARDS25519 -->  ED25519_PH_SHA_512 | ED25519_SHA_512
+        AdapterKeySpec::EccNistP256 => Ok("7a1b6dfb-df9c-4a6b-b3c4-29c028c82817"),
+        other => Err(AwsKmsError::InvalidKeyFormat(format!(
+            "no pre-defined debug key for key spec {}",
+            other.to_aws_key_spec()
+        )))?,
+        // None => Err(AwsKmsError::InvalidKeyFormat("no debug spec".to_string()))?,
+    }
 }
 
 #[cfg_attr(not(feature = "send-sync-storage"), async_trait(?Send))]
@@ -74,6 +94,10 @@ impl KeyGenerate<AwsKmsSignatureScheme, String> for AwsKmsStorage {
     type Options = AwsKmsKeyOptions;
 
     async fn generate_key_with_options(&self, options: Self::Options) -> Result<(String, Vec<u8>)> {
+        let key_id = get_test_aws_key_id(&options.key_spec.unwrap())?.to_string();
+        // let public_key = self.public_key(&key_id).await?;
+        let public_key = KeyGet::<AwsKmsSignatureScheme, String>::public_key(self, &key_id).await?;
+        return Ok((key_id, public_key));
         // If no alias is provided, generate a unique one
         let key_alias = options
             .alias
@@ -88,13 +112,19 @@ impl KeyGenerate<AwsKmsSignatureScheme, String> for AwsKmsStorage {
             .client
             .create_key()
             .key_usage(aws_sdk_kms::types::KeyUsageType::SignVerify)
-            .key_spec(aws_sdk_kms::types::KeySpec::EccNistP256);
+            .key_spec(
+                options
+                    .key_spec
+                    .and_then(|adapter_key_spec| Some(adapter_key_spec.try_into()))
+                    .transpose()?
+                    .unwrap_or(aws_sdk_kms::types::KeySpec::EccNistEdwards25519),
+            );
 
         if let Some(description) = &options.description {
             create_key = create_key.description(description);
         } else {
             create_key = create_key.description(format!(
-                "IOTA Secret Storage Key (secp256r1) - {}",
+                "IOTA Secret Storage Key (KeySpec::EccNistEdwards25519) - {}",
                 key_alias
             ));
         }
@@ -156,7 +186,8 @@ impl KeyGenerate<AwsKmsSignatureScheme, String> for AwsKmsStorage {
             .into_inner();
 
         // Return the original alias as the key identifier (without 'alias/' prefix for user display)
-        Ok((key_alias, public_key_der))
+        // Ok((key_alias, public_key_der))
+        Ok((kms_key_id, public_key_der))
     }
 }
 
@@ -164,7 +195,7 @@ impl KeySign<AwsKmsSignatureScheme, String> for AwsKmsStorage {
     fn get_signer(
         &self,
         key_id: &String,
-    ) -> Result<impl secret_storage_core::Signer<AwsKmsSignatureScheme, KeyId = String>> {
+    ) -> Result<impl secret_storage::Signer<AwsKmsSignatureScheme, KeyId = String>> {
         let _key_type = identify_key_type(key_id);
 
         // The signer will determine if this is an alias or KMS key ID internally
@@ -212,7 +243,9 @@ impl KeyDelete<String> for AwsKmsStorage {
 #[cfg_attr(feature = "send-sync-storage", async_trait)]
 impl KeyExist<String> for AwsKmsStorage {
     async fn exist(&self, key_id: &String) -> Result<bool> {
-        check_key_exists_and_enabled(&self.client, key_id).await.map_err(Into::into)
+        check_key_exists_and_enabled(&self.client, key_id)
+            .await
+            .map_err(Into::into)
     }
 }
 
@@ -228,7 +261,10 @@ impl KeyGet<AwsKmsSignatureScheme, String> for AwsKmsStorage {
             .send()
             .await
             .map_err(|e| {
-                AwsKmsError::General(format!("Failed to get public key from KMS: {}", e))
+                AwsKmsError::General(format!(
+                    "Failed to get public key from KMS: {}",
+                    e.into_source().unwrap()
+                ))
             })?;
 
         let public_key_der = public_key_response
@@ -258,6 +294,13 @@ impl KeyGet<AwsKmsSignatureScheme, String> for AwsKmsStorage {
                 ))
                 .into());
             }
+            // if key_spec != aws_sdk_kms::types::KeySpec::EccNistEdwards25519 {
+            //     return Err(AwsKmsError::General(format!(
+            //         "Key {} (actual ID: {}) is not EccNistEdwards25519, got spec: {:?}",
+            //         key_id, actual_key_id, key_spec
+            //     ))
+            //     .into());
+            // }
         }
 
         Ok(public_key_der)

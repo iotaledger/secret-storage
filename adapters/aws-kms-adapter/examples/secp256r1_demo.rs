@@ -19,7 +19,7 @@
 //! ```
 
 use aws_kms_adapter::{AwsKmsKeyOptions, AwsKmsStorage};
-use secret_storage_core::{KeyExist, KeyGenerate, KeyGet};
+use secret_storage::{KeyExist, KeyGenerate, KeyGet};
 use std::env;
 
 const ALIAS: &str = "key-demo-1";
@@ -100,6 +100,7 @@ async fn generate_secp256r1_key(
             .collect();
         println!("   📋 Public Key Preview: {}...", preview.join(" "));
     }
+    println!("   📋 Public Key Debug: {:?}...", &public_key_der);
 
     Ok((logical_key_id, public_key_der))
 }

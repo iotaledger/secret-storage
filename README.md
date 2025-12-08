@@ -52,6 +52,7 @@ export AWS_REGION=eu-west-1
 
 ```bash
 AWS_REGION=eu-west-1 AWS_PROFILE=your-profile cargo run --package storage-factory --example iota_kms_demo
+AWS_REGION=eu-west-1 AWS_PROFILE=developer cargo run --package storage-factory --example iota_kms_demo
 ```
 
 This demo will:

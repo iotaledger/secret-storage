@@ -16,7 +16,7 @@ path = "src/main.rs"
 
 [dependencies]
 # Core dependencies
-secret-storage-core = { path = "../../core/secret-storage" }
+secret-storage = { path = "../../core/secret-storage" }
 storage-factory = { path = "../storage-factory" }
 vault-adapter = { path = "../../adapters/vault-adapter" }
 

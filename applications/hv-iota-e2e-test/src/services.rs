@@ -10,7 +10,7 @@ use iota_types::{
     programmable_transaction_builder::ProgrammableTransactionBuilder,
     transaction::{Transaction, TransactionData},
 };
-use secret_storage_core::{KeyGenerate, KeySign, Signer};
+use secret_storage::{KeyGenerate, KeySign, Signer};
 use shared_crypto::intent::{Intent, IntentMessage};
 use std::time::{SystemTime, UNIX_EPOCH};
 use storage_factory::StorageBuilder;
