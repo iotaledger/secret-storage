@@ -26,7 +26,7 @@ typenum = { version = "1.0", optional = true }
 anyhow = "1"
 async-trait = "0.1"
 strum = { version = "0.27", features = ["derive"] }
-# k256 = { version = "0.13.3", default-features = false, features = ["std", "ecdsa", "ecdsa-core", "jwk"], optional = true }
+k256 = { version = "0.13.3", default-features = false, features = ["std", "ecdsa", "ecdsa-core", "jwk"], optional = true }
 p256 = { version = "0.13.2", default-features = false, features = ["std", "ecdsa", "ecdsa-core", "jwk", "arithmetic"], optional = true }
 serde_json = { version = "1.0", default-features = false, features = ["std"], optional = true }
 ed25519 = { version = "2.2", features = ["pkcs8", "alloc", "zeroize"], optional = true}
@@ -53,6 +53,7 @@ signature-scheme-iota = [
     "typenum",
     # JwkStorage impl
     "identity_iota", # todo: trim down 
+    "k256",
     "p256",
     "serde_json",
     "ed25519",

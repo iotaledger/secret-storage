@@ -43,9 +43,11 @@ fn create_jwk_for_public_key(iota_public_key: &PublicKey) -> Jwk {
     jwk
 }
 
-fn key_alg_mismatch_error(key_type: &KeyType, alg: &JwsAlgorithm) -> KeyStorageError {
+fn key_alg_mismatch_error(key_spec: &KeySpec, alg: &JwsAlgorithm) -> KeyStorageError {
     KeyStorageError::new(KeyStorageErrorKind::KeyAlgorithmMismatch).with_custom_message(format!(
-        "`cannot use key type `{key_type}` with algorithm `{alg}`"
+        "`cannot use key type `{}` with algorithm `{}`",
+        key_spec.to_aws_key_spec(),
+        alg
     ))
 }
 
@@ -78,6 +80,16 @@ fn aws_kms_key_options(
     }
 }
 
+/// Check that the key type can be used with the algorithm.
+fn check_key_alg_compatibility(key_spec: &KeySpec, alg: &JwsAlgorithm) -> KeyStorageResult<()> {
+    match (key_spec, &alg) {
+        (KeySpec::EccNistP256, JwsAlgorithm::ES256) => Ok(()),
+        (KeySpec::EccSecgP256k1, JwsAlgorithm::ES256K) => Ok(()),
+        (KeySpec::EccNistEdwards25519, JwsAlgorithm::EdDSA) => Ok(()),
+        _ => Err(key_alg_mismatch_error(&key_spec, &alg)),
+    }
+}
+
 #[cfg_attr(not(feature = "send-sync-storage"), async_trait(?Send))]
 #[cfg_attr(feature = "send-sync-storage", async_trait)]
 impl JwkStorage for AwsKmsStorage {
@@ -90,59 +102,24 @@ impl JwkStorage for AwsKmsStorage {
         let key_spec = KeySpec::try_from(key_type.as_str()).map_err(|err| {
             KeyStorageError::new(KeyStorageErrorKind::UnsupportedKeyType).with_source(err)
         })?;
-        let alg_spec = to_signing_algorithm_spec(&alg)?;
+        // TODO: resulting `SigningAlgorithmSpec` should be used as tag in `aws_kms_key_options` to keep values AWS specific
+        // check alg value validity
+        let _alg_spec = to_signing_algorithm_spec(&alg)?;
 
-        // validate key/alg combination and generate key
-        let (aws_key_id, jwk) = match key_spec {
-            KeySpec::EccNistEdwards25519 => match alg_spec {
-                // SigningAlgorithmSpec::Ed25519PhSha512 not in scope here
-                SigningAlgorithmSpec::Ed25519Sha512 => {
-                    let (aws_key_id, public_key) =
-                        KeyGenerate::<IotaKeySignature, String>::generate_key_with_options(
-                            self,
-                            aws_kms_key_options(&key_spec, &key_type, &alg),
-                        )
-                        .await
-                        .map_err(|err| {
-                            KeyStorageError::new(KeyStorageErrorKind::RetryableIOFailure)
-                                .with_custom_message(format!(
-                                    "failed to generate key in AWS; {}",
-                                    &err.to_string()
-                                ))
-                        })?;
-                    let jwk = create_jwk_for_public_key(&public_key);
-                    (aws_key_id, jwk)
-                }
-                _ => {
-                    return Err(key_alg_mismatch_error(&key_type, &alg));
-                }
-            },
-            KeySpec::EccNistP256 => match alg_spec {
-                SigningAlgorithmSpec::EcdsaSha256 => {
-                    let (aws_key_id, public_key) =
-                        KeyGenerate::<IotaKeySignature, String>::generate_key_with_options(
-                            self,
-                            aws_kms_key_options(&key_spec, &key_type, &alg),
-                        )
-                        .await
-                        .map_err(|err| {
-                            KeyStorageError::new(KeyStorageErrorKind::RetryableIOFailure)
-                                .with_custom_message(format!(
-                                    "failed to generate key in AWS; {}",
-                                    &err.to_string()
-                                ))
-                        })?;
-                    let jwk = create_jwk_for_public_key(&public_key);
-                    (aws_key_id, jwk)
-                }
-                _ => {
-                    return Err(key_alg_mismatch_error(&key_type, &alg));
-                }
-            },
-            _ => {
-                return Err(key_alg_mismatch_error(&key_type, &alg));
-            }
-        };
+        check_key_alg_compatibility(&key_spec, &alg)?;
+
+        let (aws_key_id, public_key) =
+            KeyGenerate::<IotaKeySignature, String>::generate_key_with_options(
+                self,
+                aws_kms_key_options(&key_spec, &key_type, &alg),
+            )
+            .await
+            .map_err(|err| {
+                KeyStorageError::new(KeyStorageErrorKind::RetryableIOFailure).with_custom_message(
+                    format!("failed to generate key in AWS; {}", &err.to_string()),
+                )
+            })?;
+        let jwk = create_jwk_for_public_key(&public_key);
 
         Ok(JwkGenOutput::new(KeyId::new(aws_key_id), jwk))
     }
@@ -192,11 +169,11 @@ impl JwkStorage for AwsKmsStorage {
     async fn sign(
         &self,
         key_id: &KeyId,
-        data: &[u8],
-        public_key: &Jwk,
+        _data: &[u8],
+        _public_key: &Jwk,
     ) -> KeyStorageResult<Vec<u8>> {
         let key_id_string = key_id.to_string();
-        let signer = <AwsKmsStorage as KeySign<AwsKmsSignatureScheme, String>>::get_signer(
+        let _signer = <AwsKmsStorage as KeySign<AwsKmsSignatureScheme, String>>::get_signer(
             self,
             &key_id_string,
         )
@@ -258,7 +235,7 @@ impl JwkStorage for AwsKmsStorage {
         //     .to_vec())
     }
 
-    async fn delete(&self, key_id: &KeyId) -> KeyStorageResult<()> {
+    async fn delete(&self, _key_id: &KeyId) -> KeyStorageResult<()> {
         dbg!("not deleting key in current test setup");
         Ok(())
         // let mut jwk_store: RwLockWriteGuard<'_, JwkKeyStore> = self.jwk_store.write().await;
@@ -269,19 +246,19 @@ impl JwkStorage for AwsKmsStorage {
         //     .ok_or_else(|| KeyStorageError::new(KeyStorageErrorKind::KeyNotFound))
     }
 
-    async fn exists(&self, key_id: &KeyId) -> KeyStorageResult<bool> {
+    async fn exists(&self, _key_id: &KeyId) -> KeyStorageResult<bool> {
         todo!();
         // let jwk_store: RwLockReadGuard<'_, JwkKeyStore> = self.jwk_store.read().await;
         // Ok(jwk_store.contains_key(key_id))
     }
 }
 
-/// Try to parse key spec from input. Format is adapter specific and documented
-/// [here](https://docs.aws.amazon.com/kms/latest/developerguide/symm-asymm-choose-key-spec.html).
-fn to_key_spec(key_type: KeyType) -> KeyStorageResult<KeySpec> {
-    let key_spec = KeySpec::try_from(key_type.as_str()).unwrap();
-    Ok(key_spec)
-}
+// /// Try to parse key spec from input. Format is adapter specific and documented
+// /// [here](https://docs.aws.amazon.com/kms/latest/developerguide/symm-asymm-choose-key-spec.html).
+// fn to_key_spec(key_type: KeyType) -> KeyStorageResult<KeySpec> {
+//     let key_spec = KeySpec::try_from(key_type.as_str()).unwrap();
+//     Ok(key_spec)
+// }
 
 fn to_signing_algorithm_spec(alg: &JwsAlgorithm) -> KeyStorageResult<SigningAlgorithmSpec> {
     let alg_spec = match alg {
@@ -293,6 +270,8 @@ fn to_signing_algorithm_spec(alg: &JwsAlgorithm) -> KeyStorageResult<SigningAlgo
         JwsAlgorithm::ES512 => SigningAlgorithmSpec::EcdsaSha512,
         // TODO: which of the two?
         JwsAlgorithm::EdDSA => SigningAlgorithmSpec::Ed25519Sha512,
+        // ECDSA using K-256 and SHA-256
+        JwsAlgorithm::ES256K => SigningAlgorithmSpec::EcdsaSha256,
         // JwsAlgorithm::EdDSA => SigningAlgorithmSpec::Ed25519PhSha512,
         // This mapping direction should be fine, the reverse seems to be key dependent.
         // Following [aws documentation](https://docs.aws.amazon.com/kms/latest/developerguide/symm-asymm-choose-key-spec.html#key-spec-mldsa),

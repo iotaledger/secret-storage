@@ -43,6 +43,8 @@ impl KeyGenerate<IotaKeySignature, String> for AwsKmsStorage {
         let public_key = KeyGet::<IotaKeySignature, String>::public_key(self, &key_id).await?;
 
         return Ok((key_id, public_key));
+        // TODO: generation disabled during tests, re-enable later on
+        #[allow(unreachable_code)]
         // If no alias is provided, generate a unique one
         let key_alias = options
             .alias

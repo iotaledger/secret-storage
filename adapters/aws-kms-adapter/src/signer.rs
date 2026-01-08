@@ -161,23 +161,23 @@ impl Signer<AwsKmsSignatureScheme> for AwsKmsSigner {
 
         // TODO: skip verification for now, as types might vary
         // Verify it's the expected key type (secp256r1)
-        if let Some(key_spec) = public_key_response.key_spec {
-            // if key_spec != aws_sdk_kms::types::KeySpec::EccNistP256 {
-            //     return Err(secret_storage::Error::Other(anyhow::anyhow!(
-            //         "Key {} is not secp256r1, got spec: {:?}",
-            //         key_id,
-            //         key_spec
-            //     )));
-            // }
-            // if key_spec != aws_sdk_kms::types::KeySpec::EccNistEdwards25519 {
-            //     return Err(secret_storage::Error::Other(anyhow::anyhow!(
-            //         "Key {} is not EccNistEdwards25519, got spec: {:?}",
-            //         key_id,
-            //         key_spec
-            //     ))
-            //     .into());
-            // }
-        }
+        // if let Some(key_spec) = public_key_response.key_spec {
+        //     // if key_spec != aws_sdk_kms::types::KeySpec::EccNistP256 {
+        //     //     return Err(secret_storage::Error::Other(anyhow::anyhow!(
+        //     //         "Key {} is not secp256r1, got spec: {:?}",
+        //     //         key_id,
+        //     //         key_spec
+        //     //     )));
+        //     // }
+        //     // if key_spec != aws_sdk_kms::types::KeySpec::EccNistEdwards25519 {
+        //     //     return Err(secret_storage::Error::Other(anyhow::anyhow!(
+        //     //         "Key {} is not EccNistEdwards25519, got spec: {:?}",
+        //     //         key_id,
+        //     //         key_spec
+        //     //     ))
+        //     //     .into());
+        //     // }
+        // }
 
         if let Some(key_usage) = public_key_response.key_usage {
             if key_usage != aws_sdk_kms::types::KeyUsageType::SignVerify {

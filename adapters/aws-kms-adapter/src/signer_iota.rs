@@ -171,59 +171,54 @@ mod key_utils {
     pub fn to_iota_signature(
         signature: &[u8],
         public_key_iota: &IotaKeySignaturePublicKey,
-        signing_algorithm: &SigningAlgorithmSpec,
+        _signing_algorithm: &SigningAlgorithmSpec,
     ) -> Result<Vec<u8>, Box<dyn Error>> {
-        let public_key_bytes_array = public_key_iota.as_ref();
-
-        // ECDSA secp256r1 case
-        println!("🔍 Processing ECDSA secp256r1 signature");
-
-        let (r_bytes, s_bytes) = match signing_algorithm {
-            SigningAlgorithmSpec::EcdsaSha256 => {
+        let (r_bytes, s_bytes) = match public_key_iota.scheme() {
+            Secp256r1IotaSignature::SCHEME => {
+                println!("🔍 Processing ECDSA secp256r1 signature");
                 let signature = p256::ecdsa::Signature::from_der(signature).unwrap();
                 let (r, s) = signature.split_bytes();
-                (r.to_vec(), s.to_vec())
+                // Canonicalize s value for IOTA compliance
+                let s_canonical = canonicalize_s_value_secp256r1(&s)?;
+
+                (r.to_vec(), s_canonical.to_vec())
             }
-            SigningAlgorithmSpec::Ed25519Sha512 => {
-                let signature = ed25519::Signature::from_slice(signature)
-                    .inspect_err(|err| {
-                        dbg!(err);
-                    })
-                    .unwrap();
+            Secp256k1IotaSignature::SCHEME => {
+                println!("🔍 Processing ECDSA secp256k1 signature");
+                let signature = k256::ecdsa::Signature::from_der(signature).unwrap();
+                let (r, s) = signature.split_bytes();
+                // Canonicalize s value for IOTA compliance
+                let s_canonical = canonicalize_s_value_secp256k1(&s)?;
+
+                (r.to_vec(), s_canonical.to_vec())
+            }
+            Ed25519IotaSignature::SCHEME => {
+                println!("🔍 Processing ed25519 signature");
+                let signature = ed25519::Signature::from_slice(signature).unwrap();
+
                 (signature.r_bytes().to_vec(), signature.s_bytes().to_vec())
             }
-            // SigningAlgorithmSpec::EcdsaSha384 => todo!(),
-            // SigningAlgorithmSpec::EcdsaSha512 => todo!(),
-            // SigningAlgorithmSpec::Ed25519PhSha512 => todo!(),
-            // SigningAlgorithmSpec::MlDsaShake256 => todo!(),
-            // SigningAlgorithmSpec::RsassaPkcs1V15Sha256 => todo!(),
-            // SigningAlgorithmSpec::RsassaPkcs1V15Sha384 => todo!(),
-            // SigningAlgorithmSpec::RsassaPkcs1V15Sha512 => todo!(),
-            // SigningAlgorithmSpec::RsassaPssSha256 => todo!(),
-            // SigningAlgorithmSpec::RsassaPssSha384 => todo!(),
-            // SigningAlgorithmSpec::RsassaPssSha512 => todo!(),
-            // SigningAlgorithmSpec::Sm2Dsa => todo!(),
-            // SigningAlgorithmSpec::Unknown(unknown_variant_value) => todo!(),
-            _ => todo!(),
+            scheme => return Err(format!("Unsupported public key scheme: {}", scheme).into()),
         };
 
-        // Canonicalize s value for IOTA compliance
-        let s_canonical = canonicalize_s_value(&s_bytes)?;
+        // // Canonicalize s value for IOTA compliance
+        // let s_canonical = canonicalize_s_value(&s_bytes)?;
 
         // Create IOTA signature format: [scheme_flag:1][r:32][s:32][pubkey_compressed:33]
         let mut sig_bytes = vec![public_key_iota.flag()];
 
-        // Ensure r and s are exactly 32 bytes
+        // // Ensure r and s are exactly 32 bytes
         let mut r_32 = [0u8; 32];
         let mut s_32 = [0u8; 32];
         let r_len = std::cmp::min(r_bytes.len(), 32);
-        let s_len = std::cmp::min(s_canonical.len(), 32);
+        let s_len = std::cmp::min(s_bytes.len(), 32);
         r_32[32 - r_len..].copy_from_slice(&r_bytes[r_bytes.len() - r_len..]);
-        s_32[32 - s_len..].copy_from_slice(&s_canonical[s_canonical.len() - s_len..]);
+        s_32[32 - s_len..].copy_from_slice(&s_bytes[s_bytes.len() - s_len..]);
+        s_32[32 - s_len..].copy_from_slice(&s_bytes[s_bytes.len() - s_len..]);
 
-        sig_bytes.extend_from_slice(&r_32);
-        sig_bytes.extend_from_slice(&s_32);
-        sig_bytes.extend_from_slice(&public_key_bytes_array);
+        sig_bytes.extend_from_slice(&r_bytes);
+        sig_bytes.extend_from_slice(&s_bytes);
+        sig_bytes.extend_from_slice(public_key_iota.as_ref());
 
         Ok(sig_bytes)
     }
@@ -276,9 +271,11 @@ mod key_utils {
     }
 
     pub fn convert_public_key_der_to_iota_public_key(
-        public_key_der: &Vec<u8>,
+        _public_key_der: &Vec<u8>,
     ) -> Result<IotaKeySignaturePublicKey, Box<dyn Error>> {
-        let compressed_pubkey = der_to_compressed_public_key(&public_key_der).unwrap();
+        panic!("outdated fn call");
+        #[allow(unreachable_code)]
+        let compressed_pubkey = der_to_compressed_public_key(&_public_key_der).unwrap();
 
         let public_key = IotaKeySignaturePublicKey::try_from_bytes(
             IotaSignatureScheme::Secp256r1,
@@ -289,65 +286,65 @@ mod key_utils {
         Ok(public_key)
     }
 
-    /// Parse DER signature into r and s components with canonicalization
-    fn parse_der_signature(der_signature: &[u8]) -> Result<(Vec<u8>, Vec<u8>), Box<dyn Error>> {
-        // Very basic DER parsing for ECDSA signatures
-        // DER format: 30 [length] 02 [r_length] [r_bytes] 02 [s_length] [s_bytes]
+    // /// Parse DER signature into r and s components with canonicalization
+    // fn parse_der_signature(der_signature: &[u8]) -> Result<(Vec<u8>, Vec<u8>), Box<dyn Error>> {
+    //     // Very basic DER parsing for ECDSA signatures
+    //     // DER format: 30 [length] 02 [r_length] [r_bytes] 02 [s_length] [s_bytes]
 
-        if der_signature.len() < 8 || der_signature[0] != 0x30 {
-            return Err("Invalid DER signature format".into());
-        }
+    //     if der_signature.len() < 8 || der_signature[0] != 0x30 {
+    //         return Err("Invalid DER signature format".into());
+    //     }
 
-        let mut pos = 2; // Skip 30 and total length
+    //     let mut pos = 2; // Skip 30 and total length
 
-        // Parse r
-        if der_signature[pos] != 0x02 {
-            return Err("Expected INTEGER tag for r".into());
-        }
-        pos += 1;
-        let r_len = der_signature[pos] as usize;
-        pos += 1;
-        let mut r_bytes = der_signature[pos..pos + r_len].to_vec();
-        pos += r_len;
+    //     // Parse r
+    //     if der_signature[pos] != 0x02 {
+    //         return Err("Expected INTEGER tag for r".into());
+    //     }
+    //     pos += 1;
+    //     let r_len = der_signature[pos] as usize;
+    //     pos += 1;
+    //     let mut r_bytes = der_signature[pos..pos + r_len].to_vec();
+    //     pos += r_len;
 
-        // Remove leading zero if present (DER encoding requirement)
-        if r_bytes.len() > 32 && r_bytes[0] == 0x00 {
-            r_bytes = r_bytes[1..].to_vec();
-        }
+    //     // Remove leading zero if present (DER encoding requirement)
+    //     if r_bytes.len() > 32 && r_bytes[0] == 0x00 {
+    //         r_bytes = r_bytes[1..].to_vec();
+    //     }
 
-        // Pad to 32 bytes if needed
-        while r_bytes.len() < 32 {
-            r_bytes.insert(0, 0x00);
-        }
+    //     // Pad to 32 bytes if needed
+    //     while r_bytes.len() < 32 {
+    //         r_bytes.insert(0, 0x00);
+    //     }
 
-        // Parse s
-        if der_signature[pos] != 0x02 {
-            return Err("Expected INTEGER tag for s".into());
-        }
-        pos += 1;
-        let s_len = der_signature[pos] as usize;
-        pos += 1;
-        let mut s_bytes = der_signature[pos..pos + s_len].to_vec();
+    //     // Parse s
+    //     if der_signature[pos] != 0x02 {
+    //         return Err("Expected INTEGER tag for s".into());
+    //     }
+    //     pos += 1;
+    //     let s_len = der_signature[pos] as usize;
+    //     pos += 1;
+    //     let mut s_bytes = der_signature[pos..pos + s_len].to_vec();
 
-        // Remove leading zero if present
-        if s_bytes.len() > 32 && s_bytes[0] == 0x00 {
-            s_bytes = s_bytes[1..].to_vec();
-        }
+    //     // Remove leading zero if present
+    //     if s_bytes.len() > 32 && s_bytes[0] == 0x00 {
+    //         s_bytes = s_bytes[1..].to_vec();
+    //     }
 
-        // Pad to 32 bytes if needed
-        while s_bytes.len() < 32 {
-            s_bytes.insert(0, 0x00);
-        }
+    //     // Pad to 32 bytes if needed
+    //     while s_bytes.len() < 32 {
+    //         s_bytes.insert(0, 0x00);
+    //     }
 
-        // Canonicalize s value (ensure it's low)
-        s_bytes = canonicalize_s_value(&s_bytes)?;
+    //     // Canonicalize s value (ensure it's low)
+    //     s_bytes = canonicalize_s_value(&s_bytes)?;
 
-        Ok((r_bytes, s_bytes))
-    }
+    //     Ok((r_bytes, s_bytes))
+    // }
 
     /// Canonicalize ECDSA signature s value to ensure it's in the lower half
     /// For secp256r1, if s > n/2, then s' = n - s
-    fn canonicalize_s_value(s_bytes: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+    fn canonicalize_s_value_secp256r1(s_bytes: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
         // secp256r1 curve order: n = 0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551
         let n_div_2: [u8; 32] = [
             0x7f, 0xff, 0xff, 0xff, 0x80, 0x00, 0x00, 0x00, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -378,6 +375,56 @@ mod key_utils {
                 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
                 0xff, 0xff, 0xbc, 0xe6, 0xfa, 0xad, 0xa7, 0x17, 0x9e, 0x84, 0xf3, 0xb9, 0xca, 0xc2,
                 0xfc, 0x63, 0x25, 0x51,
+            ];
+
+            let mut result = [0u8; 32];
+            let mut borrow = 0u16;
+
+            // Perform n - s (big-endian subtraction)
+            for i in (0..32).rev() {
+                let temp = n[i] as u16 + 256 - s_32[i] as u16 - borrow;
+                result[i] = (temp % 256) as u8;
+                borrow = if temp < 256 { 1 } else { 0 };
+            }
+
+            Ok(result.to_vec())
+        } else {
+            // s is already low, return as-is
+            Ok(s_32.to_vec())
+        }
+    }
+
+    fn canonicalize_s_value_secp256k1(s_bytes: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+        // secp256r1 curve order: n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+        let n_div_2: [u8; 32] = [
+            0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff, 0x5d, 0x57, 0x6e, 0x73, 0x57, 0xa4, 0x50, 0x1d, 0xdf, 0xe9, 0x2f, 0x46,
+            0x68, 0x1b, 0x20, 0xa0,
+        ];
+
+        // Convert s_bytes to comparison format
+        let mut s_32 = [0u8; 32];
+        let s_len = std::cmp::min(s_bytes.len(), 32);
+        s_32[32 - s_len..].copy_from_slice(&s_bytes[s_bytes.len() - s_len..]);
+
+        // Check if s > n/2 by comparing bytes
+        let mut s_high = false;
+        for i in 0..32 {
+            if s_32[i] > n_div_2[i] {
+                s_high = true;
+                break;
+            } else if s_32[i] < n_div_2[i] {
+                break;
+            }
+        }
+
+        if s_high {
+            // Calculate n - s
+            // n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+            let n: [u8; 32] = [
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+                0xff, 0xfe, 0xba, 0xae, 0xdc, 0xe6, 0xaf, 0x48, 0xa0, 0x3b, 0xbf, 0xd2, 0x5e, 0x8c,
+                0xd0, 0x36, 0x41, 0x41,
             ];
 
             let mut result = [0u8; 32];
@@ -450,6 +497,14 @@ mod key_utils {
                 let sec1_bytes = decoded.to_sec1_bytes();
                 let pk =
                     PublicKey::try_from_bytes(IotaSignatureScheme::Secp256r1, &sec1_bytes).unwrap();
+
+                pk
+            }
+            Some(KeySpec::EccSecgP256K1) => {
+                let decoded = k256::PublicKey::from_public_key_der(&public_key_der).unwrap();
+                let sec1_bytes = decoded.to_sec1_bytes();
+                let pk =
+                    PublicKey::try_from_bytes(IotaSignatureScheme::Secp256k1, &sec1_bytes).unwrap();
 
                 pk
             }

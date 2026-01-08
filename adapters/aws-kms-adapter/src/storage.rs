@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use async_trait::async_trait;
-use aws_sdk_kms::{types::KeySpec as AwsKeySpec, Client as KmsClient};
+use aws_sdk_kms::Client as KmsClient;
 use secret_storage::{KeyDelete, KeyExist, KeyGenerate, KeyGet, KeySign, Result, SignatureScheme};
 use uuid::Uuid;
 
@@ -80,6 +80,7 @@ pub fn get_test_aws_key_id(key_spec: &AdapterKeySpec) -> Result<&'static str> {
     match key_spec {
         AdapterKeySpec::EccNistEdwards25519 => Ok("6863eed8-b746-49da-b548-5f431da3ca05"), // ECC_NIST_EDWARDS25519 -->  ED25519_PH_SHA_512 | ED25519_SHA_512
         AdapterKeySpec::EccNistP256 => Ok("7a1b6dfb-df9c-4a6b-b3c4-29c028c82817"),
+        AdapterKeySpec::EccSecgP256k1 => Ok("78148b18-92fe-4cec-aaf6-84b8e4134335"),
         other => Err(AwsKmsError::InvalidKeyFormat(format!(
             "no pre-defined debug key for key spec {}",
             other.to_aws_key_spec()
@@ -98,6 +99,8 @@ impl KeyGenerate<AwsKmsSignatureScheme, String> for AwsKmsStorage {
         // let public_key = self.public_key(&key_id).await?;
         let public_key = KeyGet::<AwsKmsSignatureScheme, String>::public_key(self, &key_id).await?;
         return Ok((key_id, public_key));
+        // TODO: generation disabled during tests, re-enable later on
+        #[allow(unreachable_code)]
         // If no alias is provided, generate a unique one
         let key_alias = options
             .alias
