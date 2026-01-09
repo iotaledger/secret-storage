@@ -34,7 +34,6 @@ impl Signer<IotaKeySignature> for AwsKmsSigner {
         // Calculate digest to sign - use Blake2b-256 for intent message as per IOTA docs
         // Then ECDSA will internally use SHA-256
         let digest = Blake2b256::digest(&bcs_bytes);
-        println!("✅ Transaction digest prepared: {} bytes", digest.len());
 
         // let signature = Signer::<AwsKmsSignatureScheme>::sign(self, &digest.to_vec()).await?;
         let signature = sign(
@@ -175,7 +174,6 @@ mod key_utils {
     ) -> Result<Vec<u8>, Box<dyn Error>> {
         let (r_bytes, s_bytes) = match public_key_iota.scheme() {
             Secp256r1IotaSignature::SCHEME => {
-                println!("🔍 Processing ECDSA secp256r1 signature");
                 let signature = p256::ecdsa::Signature::from_der(signature).unwrap();
                 let (r, s) = signature.split_bytes();
                 // Canonicalize s value for IOTA compliance
@@ -184,7 +182,6 @@ mod key_utils {
                 (r.to_vec(), s_canonical.to_vec())
             }
             Secp256k1IotaSignature::SCHEME => {
-                println!("🔍 Processing ECDSA secp256k1 signature");
                 let signature = k256::ecdsa::Signature::from_der(signature).unwrap();
                 let (r, s) = signature.split_bytes();
                 // Canonicalize s value for IOTA compliance
@@ -193,7 +190,6 @@ mod key_utils {
                 (r.to_vec(), s_canonical.to_vec())
             }
             Ed25519IotaSignature::SCHEME => {
-                println!("🔍 Processing ed25519 signature");
                 let signature = ed25519::Signature::from_slice(signature).unwrap();
 
                 (signature.r_bytes().to_vec(), signature.s_bytes().to_vec())

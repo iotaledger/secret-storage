@@ -22,6 +22,8 @@ use identity_iota::verification::jws::JwsAlgorithm;
 use identity_iota::verification::jwu::encode_b64;
 use iota_interaction::types::crypto::PublicKey;
 use iota_interaction::IotaKeySignature;
+use k256::ecdsa::Signature as K256Signature;
+use p256::ecdsa::Signature as P256Signature;
 use p256::PublicKey as P256PublicKey;
 use secret_storage::KeyGenerate;
 use secret_storage::KeyGet;
@@ -30,6 +32,7 @@ use tokio::sync::RwLockReadGuard;
 use tokio::sync::RwLockWriteGuard;
 
 use crate::convert_public_key_der_to_iota_public_key;
+use crate::sign;
 use crate::AwsKmsKeyOptions;
 use crate::AwsKmsSignatureScheme;
 use crate::AwsKmsSigner;
@@ -169,8 +172,8 @@ impl JwkStorage for AwsKmsStorage {
     async fn sign(
         &self,
         key_id: &KeyId,
-        _data: &[u8],
-        _public_key: &Jwk,
+        data: &[u8],
+        public_key: &Jwk,
     ) -> KeyStorageResult<Vec<u8>> {
         let key_id_string = key_id.to_string();
         let _signer = <AwsKmsStorage as KeySign<AwsKmsSignatureScheme, String>>::get_signer(
@@ -183,17 +186,16 @@ impl JwkStorage for AwsKmsStorage {
                 .with_custom_message(format!("failed to create signer"))
         })?;
 
-        todo!();
         // let jwk_store: RwLockReadGuard<'_, JwkKeyStore> = self.jwk_store.read().await;
 
-        // // Extract the required alg from the given public key
-        // let alg = public_key
-        //     .alg()
-        //     .ok_or(KeyStorageErrorKind::UnsupportedSignatureAlgorithm)
-        //     .and_then(|alg_str| {
-        //         JwsAlgorithm::from_str(alg_str)
-        //             .map_err(|_| KeyStorageErrorKind::UnsupportedSignatureAlgorithm)
-        //     })?;
+        // Extract the required alg from the given public key
+        let alg = public_key
+            .alg()
+            .ok_or(KeyStorageErrorKind::UnsupportedSignatureAlgorithm)
+            .and_then(|alg_str| {
+                JwsAlgorithm::from_str(alg_str)
+                    .map_err(|_| KeyStorageErrorKind::UnsupportedSignatureAlgorithm)
+            })?;
 
         // // Check that `kty` is `Okp` and `crv = Ed25519`.
         // match alg {
@@ -221,18 +223,19 @@ impl JwkStorage for AwsKmsStorage {
         //     }
         // };
 
-        // // Obtain the corresponding private key and sign `data`.
-        // let jwk: &Jwk = jwk_store
-        //     .get(key_id)
-        //     .ok_or_else(|| KeyStorageError::new(KeyStorageErrorKind::KeyNotFound))?;
-        // let secret_key = Ed25519KeyPair::from_jwk(jwk).map_err(|err| {
-        //     KeyStorageError::new(KeyStorageErrorKind::Unspecified)
-        //         .with_custom_message("could not convert `Jwk` to `Ed25519KeyPair`")
-        //         .with_source(err)
-        // })?;
-        // Ok(Signer::<Ed25519Signature>::sign(&secret_key, data)
-        //     .as_ref()
-        //     .to_vec())
+        let alg_spec = to_signing_algorithm_spec(&alg)?;
+        let signature = sign(&self.client, &key_id.to_string(), &data.to_vec(), &alg_spec)
+            .await
+            .unwrap();
+
+        let signature = match alg {
+            JwsAlgorithm::ES256 => P256Signature::from_der(&signature).unwrap().to_vec(),
+            JwsAlgorithm::ES256K => K256Signature::from_der(&signature).unwrap().to_vec(),
+            // special case for JwsAlgorithm::EdDSA?
+            _ => signature,
+        };
+
+        Ok(signature)
     }
 
     async fn delete(&self, _key_id: &KeyId) -> KeyStorageResult<()> {
