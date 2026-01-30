@@ -1,7 +1,6 @@
 // Copyright 2020-2024 IOTA Stiftung
 // SPDX-License-Identifier: Apache-2.0
 
-
 use crate::Result;
 use crate::Signature;
 
@@ -27,4 +26,14 @@ pub trait Signer<S: Signature> {
     // and hence its construction from storage must be async.
     fn public_key(&self) -> &S::VerifyingKey;
     async fn sign(&self, data: &[u8]) -> Result<S, ()>;
+}
+
+#[cfg(feature = "iota")]
+pub mod iota {
+    use iota_sdk::types::Address;
+
+    /// An IOTA transaction signer.
+    pub trait TransactionSigner: iota_sdk::transaction_builder::TransactionSigner {
+        fn address(&self) -> Address;
+    }
 }

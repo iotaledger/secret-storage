@@ -15,8 +15,10 @@ keywords = ["crypto", "storage", "keys", "signatures", "security"]
 anyhow = "1"
 thiserror = "2"
 async-trait = "0.1"
-iota-sdk = { git = "https://github.com/iotaledger/iota-rust-sdk.git" }
+iota-sdk = { git = "https://github.com/iotaledger/iota-rust-sdk.git", optional = true }
 
 [features]
 default = ["send-sync-storage"]
 send-sync-storage = []
+# Enables the integration with IOTA SDK.
+iota = ["dep:iota-sdk"]
