@@ -15,6 +15,8 @@ pub enum AwsKmsError {
     UnsupportedKeyUsage(String),
     #[error("Invalid key format: {0}")]
     InvalidKeyFormat(String),
+    #[error("Invalid signing algorithm format: {0}")]
+    InvalidSigningAlgorithmFormat(String),
     #[error("Environment variable missing: {0}")]
     MissingEnvVar(String),
     #[error("General KMS error: {0}")]
@@ -29,6 +31,9 @@ impl From<AwsKmsError> for secret_storage::Error {
             AwsKmsError::Configuration(e) => secret_storage::Error::Other(anyhow::anyhow!(e)),
             AwsKmsError::UnsupportedKeyUsage(_e) => secret_storage::Error::InvalidOptions,
             AwsKmsError::InvalidKeyFormat(e) => secret_storage::Error::Other(anyhow::anyhow!(e)),
+            AwsKmsError::InvalidSigningAlgorithmFormat(e) => {
+                secret_storage::Error::Other(anyhow::anyhow!(e))
+            }
             AwsKmsError::MissingEnvVar(e) => {
                 secret_storage::Error::Other(anyhow::anyhow!("Missing environment variable: {}", e))
             }

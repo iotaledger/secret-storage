@@ -33,6 +33,8 @@ ed25519 = { version = "2.2", features = ["pkcs8", "alloc", "zeroize"], optional 
 pkcs8 = { version = "0.10", features = ["std"], optional = true}
 # async-trait = { version = "0.1.81", default-features = false, optional = true }
 iota-keys = { git = "https://github.com/iotaledger/iota.git", package = "iota-keys", tag = "v1.11.0" }
+rand = { version = "0.8.5", default-features = false, features = ["std", "std_rng"] }
+ring = "0.17.14"
 
 # We either have to keep track on updates of this dependency in `identity_iota`
 iota_interaction = { git = "https://github.com/iotaledger/product-core.git", tag = "v0.8.6", package = "iota_interaction", optional = true}
@@ -41,7 +43,7 @@ iota_interaction = { git = "https://github.com/iotaledger/product-core.git", tag
 identity_iota = { git = "https://github.com/iotaledger/identity.git", tag = "v1.7.0-beta.4", package = "identity_iota", optional = true }
 
 [features]
-default = ["send-sync-storage", "signature-scheme-aws", "signature-scheme-raw", "signature-scheme-iota"]
+default = ["send-sync-storage", "signature-scheme-iota"]
 send-sync-storage = []
 signature-scheme-aws = []
 signature-scheme-raw = ["secret-storage/signature-scheme-raw"]
