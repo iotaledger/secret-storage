@@ -35,6 +35,7 @@ pkcs8 = { version = "0.10", features = ["std"], optional = true}
 iota-keys = { git = "https://github.com/iotaledger/iota.git", package = "iota-keys", tag = "v1.11.0" }
 rand = { version = "0.8.5", default-features = false, features = ["std", "std_rng"] }
 ring = "0.17.14"
+multi-schema = { path = "../../integration/multi-schema" }
 
 # We either have to keep track on updates of this dependency in `identity_iota`
 iota_interaction = { git = "https://github.com/iotaledger/product-core.git", tag = "v0.8.6", package = "iota_interaction", optional = true}
@@ -44,7 +45,7 @@ identity_iota = { git = "https://github.com/iotaledger/identity.git", tag = "v1.
 
 [features]
 default = ["send-sync-storage", "signature-scheme-iota"]
-send-sync-storage = []
+send-sync-storage = ["iota_interaction/send-sync-transaction", "secret-storage/send-sync-storage"]
 signature-scheme-aws = []
 signature-scheme-raw = ["secret-storage/signature-scheme-raw"]
 signature-scheme-iota = [

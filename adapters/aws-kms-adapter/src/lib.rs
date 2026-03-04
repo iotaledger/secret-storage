@@ -31,8 +31,4 @@ pub use signer::*;
 pub use storage::*;
 pub use utils::*;
 
-#[cfg(feature = "signature-scheme-iota")]
-pub mod signature_scheme_iota;
-
-#[cfg(feature = "signature-scheme-aws")]
-pub mod signature_scheme_aws;
+pub mod signature_scheme_multi;

@@ -12,27 +12,27 @@ use secret_storage::Error;
 use secret_storage::Result;
 
 pub async fn create_kms_client_from_config(config: &AwsKmsConfig) -> Result<KmsClient> {
-    let aws_config = match &config.region {
-        Some(RegionIdentifier::Region(region)) => {
-            aws_config::defaults(aws_config::BehaviorVersion::latest())
-                .region(aws_config::Region::new(region.clone()))
-                .load()
-                .await
-        }
-        Some(RegionIdentifier::Profile(profile)) => {
-            aws_config::defaults(aws_config::BehaviorVersion::latest())
-                .profile_name(profile)
-                .load()
-                .await
-        }
-        None => {
-            return Err(Error::InvalidConfig(
-                "missing region identifier (region name or profile) in config".to_string(),
-            ));
-        }
-    };
+  let aws_config = match &config.region {
+    Some(RegionIdentifier::Region(region)) => {
+      aws_config::defaults(aws_config::BehaviorVersion::latest())
+        .region(aws_config::Region::new(region.clone()))
+        .load()
+        .await
+    }
+    Some(RegionIdentifier::Profile(profile)) => {
+      aws_config::defaults(aws_config::BehaviorVersion::latest())
+        .profile_name(profile)
+        .load()
+        .await
+    }
+    None => {
+      return Err(Error::InvalidConfig(
+        "missing region identifier (region name or profile) in config".to_string(),
+      ));
+    }
+  };
 
-    Ok(KmsClient::new(&aws_config))
+  Ok(KmsClient::new(&aws_config))
 }
 
 // /// Create KMS client from config

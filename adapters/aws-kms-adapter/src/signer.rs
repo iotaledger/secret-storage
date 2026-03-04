@@ -2,154 +2,31 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use aws_sdk_kms::Client as KmsClient;
-use secret_storage::Result;
 
-use crate::utils::key_utils::is_alias;
-use crate::SigningAlgorithmSpec;
+use crate::KeySpec;
 
 /// AWS KMS signer implementation
 pub struct AwsKmsSigner {
-    pub(crate) client: KmsClient,
-    pub(crate) alias: String,
-    pub(crate) kms_key_id: String,
-    pub(crate) signing_algorithm: SigningAlgorithmSpec,
+  pub(crate) client: KmsClient,
+  pub(crate) key_spec: KeySpec,
+  kms_key_id: String,
 }
 
+/// Defines general instance handling.
+///
+/// As we don't expose signing without the [secret_storage::Singer] trait, signing logic is located
+/// in that traits implementation.
 impl AwsKmsSigner {
-    /// Create new AWS KMS signer
-    /// key_identifier can be either an alias or a KMS key ID/ARN
-    pub fn new(
-        client: KmsClient,
-        key_identifier: String,
-        kms_key_id: String,
-        signing_algorithm: &SigningAlgorithmSpec,
-    ) -> Self {
-        // Determine if this is an alias or a KMS key ID/ARN
-        let (alias, actual_kms_key_id) = if is_alias(&key_identifier) {
-            // It's an alias - keep it as-is and use the resolved key ID
-            (key_identifier, kms_key_id)
-        } else {
-            // It's a KMS key ID or ARN, so alias is empty and we use the key_identifier as kms_key_id
-            (String::new(), key_identifier)
-        };
-
-        Self {
-            client,
-            alias,
-            kms_key_id: actual_kms_key_id,
-            signing_algorithm: signing_algorithm.clone(),
-        }
+  /// Create new AWS KMS signer
+  pub fn new(client: KmsClient, kms_key_id: String, key_spec: KeySpec) -> Self {
+    Self {
+      client,
+      kms_key_id,
+      key_spec,
     }
+  }
 
-    /// Set signing algorithm
-    pub fn with_signing_algorithm(mut self, algorithm: SigningAlgorithmSpec) -> Self {
-        self.signing_algorithm = algorithm;
-        self
-    }
-
-    /// Get the appropriate key identifier for AWS KMS API calls
-    /// Adds 'alias/' prefix for user aliases as required by AWS API
-    pub(crate) fn get_api_key_id(&self) -> String {
-        if !self.alias.is_empty() {
-            format!("alias/{}", self.alias)
-        } else {
-            self.kms_key_id.clone()
-        }
-    }
-}
-
-/// Handles signing behavior as described by [Signer] trait, without implementing it.
-/// Used by specific signature scheme implementations.
-impl AwsKmsSigner {
-    pub(crate) async fn sign(&self, data: &Vec<u8>) -> Result<Vec<u8>> {
-        sign(
-            &self.client,
-            &self.get_api_key_id(),
-            data,
-            &self.signing_algorithm,
-        )
-        .await
-    }
-
-    // as it's a shared behavior between storage and signer, this fn has been moved to a utility scope
-    // pub(crate) async fn public_key(&self) -> Result<Vec<u8>> {
-    //     // Get the appropriate key identifier for AWS KMS API
-    //     let key_id = self.get_api_key_id();
-
-    //     // Get public key from AWS KMS
-    //     let public_key_response = self
-    //         .client
-    //         .get_public_key()
-    //         .key_id(&key_id)
-    //         .send()
-    //         .await
-    //         .map_err(|e| {
-    //             secret_storage::Error::Other(anyhow::anyhow!(
-    //                 "Failed to get public key from AWS KMS for key {}: {}",
-    //                 key_id,
-    //                 e
-    //             ))
-    //         })?;
-
-    //     let public_key_der = public_key_response
-    //         .public_key
-    //         .ok_or_else(|| {
-    //             secret_storage::Error::Other(anyhow::anyhow!("No public key returned from AWS KMS"))
-    //         })?
-    //         .into_inner();
-
-    //     if let Some(key_usage) = public_key_response.key_usage {
-    //         if key_usage != aws_sdk_kms::types::KeyUsageType::SignVerify {
-    //             return Err(secret_storage::Error::Other(anyhow::anyhow!(
-    //                 "Key {} is not for signing, got usage: {:?}",
-    //                 key_id,
-    //                 key_usage
-    //             )));
-    //         }
-    //     }
-
-    //     Ok(public_key_der)
-    // }
-
-    pub(crate) fn key_id(&self) -> String {
-        // Return the most appropriate identifier
-        if !self.alias.is_empty() {
-            self.alias.clone()
-        } else {
-            self.kms_key_id.clone()
-        }
-    }
-}
-
-pub async fn sign(
-    client: &KmsClient,
-    key_id: &str,
-    data: &Vec<u8>,
-    signing_algorithm: &SigningAlgorithmSpec,
-) -> Result<Vec<u8>> {
-    // Perform AWS KMS signing operation
-    let sign_response = client
-        .sign()
-        .key_id(key_id)
-        .message(aws_sdk_kms::primitives::Blob::new(data.clone()))
-        .message_type(aws_sdk_kms::types::MessageType::Raw)
-        .signing_algorithm(signing_algorithm.clone().try_into().unwrap())
-        .send()
-        .await
-        .map_err(|e| {
-            secret_storage::Error::Other(anyhow::anyhow!(
-                "AWS KMS signing failed for key {}: {}",
-                key_id,
-                e.as_service_error().unwrap().meta()
-            ))
-        })?;
-
-    let signature = sign_response
-        .signature
-        .ok_or_else(|| {
-            secret_storage::Error::Other(anyhow::anyhow!("No signature returned from AWS KMS"))
-        })?
-        .into_inner();
-
-    Ok(signature)
+  pub(crate) fn key_id(&self) -> String {
+    self.kms_key_id.clone()
+  }
 }

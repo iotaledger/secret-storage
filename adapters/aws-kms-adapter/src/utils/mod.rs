@@ -5,8 +5,5 @@
 
 pub mod aws_client;
 pub mod key_utils;
-pub mod kms_operations;
 
 pub use aws_client::*;
-pub use key_utils::*;
-pub use kms_operations::*;

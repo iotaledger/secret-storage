@@ -68,3 +68,14 @@ pub trait KeyExist<I> {
 pub trait KeyGet<K: SignatureScheme, I> {
     async fn public_key(&self, key_id: &I) -> Result<K::PublicKey>;
 }
+
+/// KeySignWithAlgorithm is used to sign a hash with a private key located in a key store.
+/// The method return a [`Signer`] object.
+///
+/// This variant allows to pass in in an algorithm, that the signer will use.
+#[cfg_attr(not(feature = "send-sync-storage"), async_trait(?Send))]
+#[cfg_attr(feature = "send-sync-storage", async_trait)]
+pub trait KeySignWithAlgorithm<K: SignatureScheme, I, A> {
+    type Signer: Signer<K>;
+    fn get_signer_with_algorithm(&self, key_id: &I, algorithm: &A) -> Result<Self::Signer>;
+}

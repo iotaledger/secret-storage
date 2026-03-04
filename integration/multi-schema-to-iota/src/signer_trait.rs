@@ -1,39 +1,40 @@
-// Copyright 2020-2024 IOTA Stiftung
-// SPDX-License-Identifier: Apache-2.0
-
 use std::error::Error;
 
 use async_trait::async_trait;
 use blake2::Blake2b;
 use blake2::Digest;
+use iota_interaction::OptionalSync;
 use iota_interaction::shared_crypto::intent::Intent;
 use iota_interaction::shared_crypto::intent::IntentMessage;
 use iota_interaction::types::crypto::Ed25519IotaSignature;
 use iota_interaction::types::crypto::IotaSignatureInner as _;
 use iota_interaction::types::crypto::Secp256k1IotaSignature;
 use iota_interaction::types::crypto::Secp256r1IotaSignature;
-use iota_interaction::types::crypto::ToFromBytes;
-use iota_interaction::IotaKeySignature;
+use iota_interaction::types::crypto::ToFromBytes as _;
+use multi_schema::SignatureSchemeMulti;
 use secret_storage::Signer;
 
-use crate::get_public_key_der;
-use crate::signature_scheme_iota::convert_public_key_der_to_iota_public_key;
-use crate::signature_scheme_iota::SignatureSchemeInput;
-use crate::signature_scheme_iota::SignatureSchemePublicKey;
-use crate::signature_scheme_iota::SignatureSchemeSignature;
-use crate::AwsKmsSigner;
+use crate::signer::IotaCompatibleSigner;
+use crate::utils::SignatureSchemeIota;
+use crate::utils::SignatureSchemeIotaInput;
+use crate::utils::SignatureSchemeIotaPublicKey;
+use crate::utils::SignatureSchemeIotaSignature;
+use crate::utils::convert_public_key_der_to_iota_public_key;
 
 type Blake2b256 = Blake2b<typenum::U32>;
 
 #[cfg_attr(not(feature = "send-sync-storage"), async_trait(?Send))]
 #[cfg_attr(feature = "send-sync-storage", async_trait)]
-impl Signer<IotaKeySignature> for AwsKmsSigner {
+impl<T> Signer<SignatureSchemeIota> for IotaCompatibleSigner<T>
+where
+    T: Signer<SignatureSchemeMulti, KeyId = String> + OptionalSync,
+{
     type KeyId = String;
 
     async fn sign(
         &self,
-        data: &SignatureSchemeInput,
-    ) -> secret_storage::Result<SignatureSchemeSignature> {
+        data: &SignatureSchemeIotaInput,
+    ) -> secret_storage::Result<SignatureSchemeIotaSignature> {
         // Prepare intent message for signing
         let intent_msg = IntentMessage::new(Intent::iota_transaction(), data.clone());
         let bcs_bytes = bcs::to_bytes(&intent_msg).unwrap();
@@ -43,38 +44,42 @@ impl Signer<IotaKeySignature> for AwsKmsSigner {
         let digest = Blake2b256::digest(&bcs_bytes);
 
         // signature as returned from AWS
-        let signature = self.sign(&digest.to_vec()).await.unwrap();
+        let signature = self.inner.sign(&digest.to_vec()).await.unwrap();
 
         // build IOTA signature with public key
-        let public_key_iota = Signer::<IotaKeySignature>::public_key(self).await?;
-        let iota_signature_bytes = to_iota_signature(&signature, &public_key_iota).unwrap();
-        let iota_signature = SignatureSchemeSignature::from_bytes(&iota_signature_bytes).unwrap();
+        let public_key_iota = Signer::<SignatureSchemeIota>::public_key(self).await?;
+        let iota_signature_bytes = to_iota_signature(&signature.bytes, &public_key_iota).unwrap();
+        let iota_signature =
+            SignatureSchemeIotaSignature::from_bytes(&iota_signature_bytes).unwrap();
 
         Ok(iota_signature)
     }
 
-    async fn public_key(&self) -> secret_storage::Result<SignatureSchemePublicKey> {
-        let (public_key_der, key_spec) =
-            get_public_key_der(&self.client, &self.get_api_key_id()).await?;
-        let public_key_iota =
-            convert_public_key_der_to_iota_public_key(&public_key_der, &key_spec.try_into()?)
-                .unwrap();
+    async fn public_key(&self) -> secret_storage::Result<SignatureSchemeIotaPublicKey> {
+        let public_key = self.inner.public_key().await.unwrap();
+
+        let public_key_iota = convert_public_key_der_to_iota_public_key(
+            &public_key.bytes,
+            &public_key.public_key_type,
+        )
+        .unwrap();
 
         Ok(public_key_iota)
     }
 
     fn key_id(&self) -> Self::KeyId {
-        self.key_id()
+        self.inner.key_id().to_string()
     }
 }
 
 pub fn to_iota_signature(
     signature: &[u8],
-    public_key_iota: &SignatureSchemePublicKey,
+    public_key_iota: &SignatureSchemeIotaPublicKey,
 ) -> Result<Vec<u8>, Box<dyn Error>> {
     let (r_bytes, s_bytes) = match public_key_iota.scheme() {
         Secp256r1IotaSignature::SCHEME => {
-            let signature = p256::ecdsa::Signature::from_der(signature).unwrap();
+            // let signature = p256::ecdsa::Signature::from_der(signature).unwrap(); // der encoding already undone
+            let signature = p256::ecdsa::Signature::from_bytes(signature.into()).unwrap();
             let (r, s) = signature.split_bytes();
             // Canonicalize s value for IOTA compliance
             let s_canonical = canonicalize_s_value_secp256r1(&s)?;
@@ -82,7 +87,8 @@ pub fn to_iota_signature(
             (r.to_vec(), s_canonical.to_vec())
         }
         Secp256k1IotaSignature::SCHEME => {
-            let signature = k256::ecdsa::Signature::from_der(signature).unwrap();
+            // let signature = k256::ecdsa::Signature::from_der(signature).unwrap(); // der encoding already undone
+            let signature = k256::ecdsa::Signature::from_bytes(signature.into()).unwrap();
             let (r, s) = signature.split_bytes();
             // Canonicalize s value for IOTA compliance
             let s_canonical = canonicalize_s_value_secp256k1(&s)?;
@@ -97,21 +103,7 @@ pub fn to_iota_signature(
         scheme => return Err(format!("Unsupported public key scheme: {}", scheme).into()),
     };
 
-    // Create IOTA signature format: [scheme_flag:1][r:32][s:32][pubkey_compressed:33]
-    let mut sig_bytes = vec![public_key_iota.flag()];
-
-    // // Ensure r and s are exactly 32 bytes
-    let mut r_32 = [0u8; 32];
-    let mut s_32 = [0u8; 32];
-    let r_len = std::cmp::min(r_bytes.len(), 32);
-    let s_len = std::cmp::min(s_bytes.len(), 32);
-    r_32[32 - r_len..].copy_from_slice(&r_bytes[r_bytes.len() - r_len..]);
-    s_32[32 - s_len..].copy_from_slice(&s_bytes[s_bytes.len() - s_len..]);
-    s_32[32 - s_len..].copy_from_slice(&s_bytes[s_bytes.len() - s_len..]);
-
-    sig_bytes.extend_from_slice(&r_bytes);
-    sig_bytes.extend_from_slice(&s_bytes);
-    sig_bytes.extend_from_slice(public_key_iota.as_ref());
+    let sig_bytes = concat_signature(&public_key_iota, &r_bytes, &s_bytes);
 
     Ok(sig_bytes)
 }
@@ -216,4 +208,28 @@ fn canonicalize_s_value_secp256k1(s_bytes: &[u8]) -> Result<Vec<u8>, Box<dyn Err
         // s is already low, return as-is
         Ok(s_32.to_vec())
     }
+}
+
+pub fn concat_signature(
+    public_key_iota: &SignatureSchemeIotaPublicKey,
+    r_bytes: &[u8],
+    s_bytes: &[u8],
+) -> Vec<u8> {
+    // Create IOTA signature format: [scheme_flag:1][r:32][s:32][pubkey_compressed:33]
+    let mut sig_bytes = vec![public_key_iota.flag()];
+
+    // // Ensure r and s are exactly 32 bytes
+    let mut r_32 = [0u8; 32];
+    let mut s_32 = [0u8; 32];
+    let r_len = std::cmp::min(r_bytes.len(), 32);
+    let s_len = std::cmp::min(s_bytes.len(), 32);
+    r_32[32 - r_len..].copy_from_slice(&r_bytes[r_bytes.len() - r_len..]);
+    s_32[32 - s_len..].copy_from_slice(&s_bytes[s_bytes.len() - s_len..]);
+    s_32[32 - s_len..].copy_from_slice(&s_bytes[s_bytes.len() - s_len..]);
+
+    sig_bytes.extend_from_slice(&r_bytes);
+    sig_bytes.extend_from_slice(&s_bytes);
+    sig_bytes.extend_from_slice(public_key_iota.as_ref());
+
+    sig_bytes
 }

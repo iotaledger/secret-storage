@@ -6,6 +6,8 @@ members = [
     "adapters/vault-adapter",
     "applications/storage-factory",
     "applications/hv-iota-e2e-test",
+    "integration/multi-schema",
+    "integration/multi-schema-to-iota",
 ]
 
 [workspace.dependencies]

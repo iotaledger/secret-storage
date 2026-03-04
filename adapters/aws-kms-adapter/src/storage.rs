@@ -1,7 +1,6 @@
 // Copyright 2020-2024 IOTA Stiftung
 // SPDX-License-Identifier: Apache-2.0
 
-use aws_sdk_kms::types::KeySpec;
 use aws_sdk_kms::Client as KmsClient;
 use secret_storage::Result;
 use uuid::Uuid;
@@ -12,601 +11,187 @@ use crate::AwsKmsError;
 use crate::AwsKmsSigner;
 use crate::KeySpec as AdapterKeySpec;
 
+/// generic default values in adapter creation
 /// Options for key generation in AWS KMS
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct AwsKmsKeyOptions {
-    /// Optional key policy
-    pub policy: Option<String>,
-    /// Optional key description
-    pub description: Option<String>,
-    /// Alias
-    pub alias: Option<String>,
-    /// Optional tags
-    pub tags: Vec<(String, String)>,
-    /// Optional KeySpec to use
-    pub key_spec: Option<AdapterKeySpec>,
+  /// Optional key policy
+  pub policy: Option<String>,
+  /// Optional key description
+  pub description: Option<String>,
+  /// Alias
+  pub alias: Option<String>,
+  /// Optional tags
+  pub tags: Vec<(String, String)>,
+  /// Optional KeySpec to use
+  pub key_spec: Option<AdapterKeySpec>,
 }
-
-const DEFAULT_PENDING_WINDOW_IN_DAYS: i32 = 7;
 
 /// AWS KMS storage implementation
 pub struct AwsKmsStorage {
-    pub(crate) client: KmsClient,
-    #[allow(dead_code)]
-    pub(crate) config: AwsKmsConfig,
+  pub client: KmsClient,
+  #[allow(dead_code)]
+  pub(crate) config: AwsKmsConfig,
 }
 
 /// public behavior
 impl AwsKmsStorage {
-    /// Create new AWS KMS storage
-    pub async fn new(config: AwsKmsConfig) -> Result<Self> {
-        let client = create_kms_client_from_config(&config).await?;
-        Ok(Self { client, config })
-    }
+  /// Create new AWS KMS storage
+  pub async fn new(config: AwsKmsConfig) -> Result<Self> {
+    let client = create_kms_client_from_config(&config).await?;
+    Ok(Self { client, config })
+  }
 }
 // helper functions for building signature trait implementations
 impl AwsKmsStorage {
-    pub(crate) async fn generate_key(
-        &self,
-        options: AwsKmsKeyOptions,
-    ) -> Result<(String, Vec<u8>)> {
-        // If no alias is provided, generate a unique one
-        let key_alias = options
-            .alias
-            .unwrap_or_else(|| format!("{}", Uuid::new_v4()));
+  // pub(crate) async fn generate_key(&self, options: AwsKmsKeyOptions) -> Result<(String, Vec<u8>)> {
+  pub(crate) async fn generate_key(&self, key_spec: AdapterKeySpec) -> Result<(String, Vec<u8>)> {
+    // If no alias is provided, generate a unique one
+    let key_alias = self
+      .config
+      .key_options
+      .alias
+      .clone()
+      .unwrap_or_else(|| format!("{}", Uuid::new_v4()));
 
-        self.client
-            .create_alias()
-            .set_alias_name(Some(key_alias.clone()));
+    self.client.create_alias().set_alias_name(Some(key_alias.clone()));
 
-        // Create KMS key for signing with secp256r1 (ECC_NIST_P256)
-        let key_spec: KeySpec = options
-            .key_spec
-            .and_then(|adapter_key_spec| Some(adapter_key_spec.try_into()))
-            .transpose()?
-            .unwrap(); // TODO: proper error on undefined
-        let mut create_key = self
-            .client
-            .create_key()
-            .key_usage(aws_sdk_kms::types::KeyUsageType::SignVerify)
-            .key_spec(key_spec.clone());
+    let mut create_key = self
+      .client
+      .create_key()
+      .key_usage(aws_sdk_kms::types::KeyUsageType::SignVerify)
+      .key_spec(key_spec.try_into().unwrap());
 
-        if let Some(description) = &options.description {
-            create_key = create_key.description(description);
-        } else {
-            create_key = create_key.description(format!(
-                "IOTA Secret Storage Key ({key_spec}) - {key_alias}",
-            ));
-        }
-
-        if let Some(policy) = &options.policy {
-            create_key = create_key.policy(policy);
-        }
-
-        // Add tags if provided
-        if !options.tags.is_empty() {
-            let tags: Vec<_> = options
-                .tags
-                .iter()
-                .map(|(k, v)| {
-                    aws_sdk_kms::types::Tag::builder()
-                        .tag_key(k)
-                        .tag_value(v)
-                        .build()
-                        .unwrap()
-                })
-                .collect();
-            create_key = create_key.set_tags(Some(tags));
-        }
-
-        // Execute KMS key creation
-        let create_response = create_key
-            .send()
-            .await
-            .map_err(|e| AwsKmsError::General(format!("Failed to create KMS key: {}", e)))?;
-
-        let kms_key_id = create_response
-            .key_metadata
-            .map(|metadata| metadata.key_id)
-            .ok_or_else(|| AwsKmsError::General("No key ID returned from KMS".to_string()))?;
-
-        // Create the alias for the key (AWS requires 'alias/' prefix)
-        let aws_alias_name = format!("alias/{}", key_alias);
-
-        self.client
-            .create_alias()
-            .alias_name(&aws_alias_name)
-            .target_key_id(&kms_key_id)
-            .send()
-            .await
-            .map_err(|e| AwsKmsError::General(format!("Failed to create alias: {}", e)))?;
-
-        // Get the public key immediately after creation using the alias
-        let public_key_response = self
-            .client
-            .get_public_key()
-            .key_id(&aws_alias_name)
-            .send()
-            .await
-            .map_err(|e| AwsKmsError::General(format!("Failed to get public key: {}", e)))?;
-
-        let public_key_der = public_key_response
-            .public_key
-            .ok_or_else(|| AwsKmsError::General("No public key returned from KMS".to_string()))?
-            .into_inner();
-
-        // Return the original alias as the key identifier (without 'alias/' prefix for user display)
-        // Ok((key_alias, public_key_der))
-        Ok((kms_key_id, public_key_der))
+    if let Some(description) = &self.config.key_options.description {
+      create_key = create_key.description(description);
+    } else {
+      create_key = create_key.description(format!("IOTA Secret Storage Key ({key_spec}) - {key_alias}",));
     }
 
-    // to be removed
-    // shared behavior between signer and storage, so keeping it in helper function
-    // pub(crate) async fn get_public_key_der(&self, key_id: &str) -> Result<(Vec<u8>, KeySpec)> {
-    //     // AWS KMS get_public_key accepts both aliases and KMS key IDs
-    //     let public_key_response = self
-    //         .client
-    //         .get_public_key()
-    //         .key_id(key_id)
-    //         .send()
-    //         .await
-    //         .map_err(|e| {
-    //             AwsKmsError::General(format!(
-    //                 "Failed to get public key from KMS: {}",
-    //                 e.into_source().unwrap()
-    //             ))
-    //         })
-    //         .unwrap();
-
-    //     // Get the actual KMS key ID for logging and validation
-    //     let actual_key_id = public_key_response.key_id.as_deref().unwrap_or("unknown");
-
-    //     // Verify it's the expected key type
-    //     if let Some(key_usage) = public_key_response.key_usage {
-    //         if key_usage != aws_sdk_kms::types::KeyUsageType::SignVerify {
-    //             return Err(AwsKmsError::General(format!(
-    //                 "Key {} (actual ID: {}) is not for signing, got usage: {:?}",
-    //                 key_id, actual_key_id, key_usage
-    //             ))
-    //             .into());
-    //         }
-    //     }
-
-    //     let key_spec = public_key_response.key_spec().ok_or_else(|| {
-    //         Err(
-    //             AwsKmsError::General(format!("Key {} is missing KeySpec information", key_id))
-    //                 .into(),
-    //         )
-    //     })?;
-
-    //     let public_key_der = public_key_response
-    //         .public_key
-    //         .ok_or_else(|| AwsKmsError::General("No public key returned from KMS".to_string()))?
-    //         .into_inner();
-
-    //     Ok((public_key_der, key_spec.clone()))
-    // }
-
-    pub(crate) async fn delete(
-        &self,
-        key_id: &str,
-        pending_window_in_days: Option<i32>,
-    ) -> Result<()> {
-        self.client
-            .schedule_key_deletion()
-            .key_id(key_id)
-            .pending_window_in_days(
-                pending_window_in_days.unwrap_or(DEFAULT_PENDING_WINDOW_IN_DAYS),
-            )
-            .send()
-            .await
-            .unwrap();
-        Ok(())
+    if let Some(policy) = &self.config.key_options.policy {
+      create_key = create_key.policy(policy);
     }
 
-    pub(crate) fn get_signer(&self, key_id: &String) -> Result<AwsKmsSigner> {
-        if let Some(signing_algorithm_spec) = &self.config.transaction_signing_algorithm {
-            // The signer will determine if this is an alias or KMS key ID internally
-            Ok(AwsKmsSigner::new(
-                self.client.clone(),
-                key_id.clone(),
-                key_id.clone(), // Pass the same identifier - signer will handle the distinction
-                signing_algorithm_spec,
-            ))
-        } else {
-            Err(AwsKmsError::Configuration(
-                "Signing_algorithm_spec not configured in AwsKmsStorage.".to_string(),
-            )
-            .into())
-        }
+    // Add tags if provided
+    if !self.config.key_options.tags.is_empty() {
+      let tags: Vec<_> = self
+        .config
+        .key_options
+        .tags
+        .iter()
+        .map(|(k, v)| {
+          aws_sdk_kms::types::Tag::builder()
+            .tag_key(k)
+            .tag_value(v)
+            .build()
+            .unwrap()
+        })
+        .collect();
+      create_key = create_key.set_tags(Some(tags));
     }
+
+    // Execute KMS key creation
+    let create_response = create_key
+      .send()
+      .await
+      .map_err(|e| AwsKmsError::General(format!("Failed to create KMS key: {}", e)))?;
+
+    let kms_key_id = create_response
+      .key_metadata
+      .map(|metadata| metadata.key_id)
+      .ok_or_else(|| AwsKmsError::General("No key ID returned from KMS".to_string()))?;
+
+    // Create the alias for the key (AWS requires 'alias/' prefix)
+    let aws_alias_name = format!("alias/{}", key_alias);
+
+    self
+      .client
+      .create_alias()
+      .alias_name(&aws_alias_name)
+      .target_key_id(&kms_key_id)
+      .send()
+      .await
+      .map_err(|e| AwsKmsError::General(format!("Failed to create alias: {}", e)))?;
+
+    // Get the public key immediately after creation using the alias
+    let public_key_response = self
+      .client
+      .get_public_key()
+      .key_id(&aws_alias_name)
+      .send()
+      .await
+      .map_err(|e| AwsKmsError::General(format!("Failed to get public key: {}", e)))?;
+
+    let public_key_der = public_key_response
+      .public_key
+      .ok_or_else(|| AwsKmsError::General("No public key returned from KMS".to_string()))?
+      .into_inner();
+
+    // Return the original alias as the key identifier (without 'alias/' prefix for user display)
+    // Ok((key_alias, public_key_der))
+    Ok((kms_key_id, public_key_der))
+  }
+
+  // to be removed
+  // shared behavior between signer and storage, so keeping it in helper function
+  // pub(crate) async fn get_public_key_der(&self, key_id: &str) -> Result<(Vec<u8>, KeySpec)> {
+  //     // AWS KMS get_public_key accepts both aliases and KMS key IDs
+  //     let public_key_response = self
+  //         .client
+  //         .get_public_key()
+  //         .key_id(key_id)
+  //         .send()
+  //         .await
+  //         .map_err(|e| {
+  //             AwsKmsError::General(format!(
+  //                 "Failed to get public key from KMS: {}",
+  //                 e.into_source().unwrap()
+  //             ))
+  //         })
+  //         .unwrap();
+
+  //     // Get the actual KMS key ID for logging and validation
+  //     let actual_key_id = public_key_response.key_id.as_deref().unwrap_or("unknown");
+
+  //     // Verify it's the expected key type
+  //     if let Some(key_usage) = public_key_response.key_usage {
+  //         if key_usage != aws_sdk_kms::types::KeyUsageType::SignVerify {
+  //             return Err(AwsKmsError::General(format!(
+  //                 "Key {} (actual ID: {}) is not for signing, got usage: {:?}",
+  //                 key_id, actual_key_id, key_usage
+  //             ))
+  //             .into());
+  //         }
+  //     }
+
+  //     let key_spec = public_key_response.key_spec().ok_or_else(|| {
+  //         Err(
+  //             AwsKmsError::General(format!("Key {} is missing KeySpec information", key_id))
+  //                 .into(),
+  //         )
+  //     })?;
+
+  //     let public_key_der = public_key_response
+  //         .public_key
+  //         .ok_or_else(|| AwsKmsError::General("No public key returned from KMS".to_string()))?
+  //         .into_inner();
+
+  //     Ok((public_key_der, key_spec.clone()))
+  // }
+
+  //   async fn delete(&self, key_id: &str, pending_window_in_days: Option<i32>) -> Result<()> {
+  //     self
+  //       .client
+  //       .schedule_key_deletion()
+  //       .key_id(key_id)
+  //       .pending_window_in_days(pending_window_in_days.unwrap_or(DEFAULT_PENDING_WINDOW_IN_DAYS))
+  //       .send()
+  //       .await
+  //       .unwrap();
+  //     Ok(())
+  //   }
+
+  pub(crate) fn get_signer_with_key_spec(&self, key_id: &String, key_spec: AdapterKeySpec) -> Result<AwsKmsSigner> {
+    Ok(AwsKmsSigner::new(self.client.clone(), key_id.clone(), key_spec))
+  }
 }
-
-// TODO: postpone inserting for a bit to avoid client side encryption concerns for now
-// should be added in the future, but dependencies and options might become interesting
-
-// mod key_insert {
-//     use super::*;
-
-//     use aws_sdk_kms::primitives::Blob;
-//     use aws_sdk_kms::types::AlgorithmSpec;
-//     use aws_sdk_kms::types::ExpirationModelType;
-//     use aws_sdk_kms::types::KeySpec;
-//     use aws_sdk_kms::types::OriginType;
-//     use aws_sdk_kms::types::WrappingKeySpec;
-//     use uuid::Uuid;
-
-//     use crate::AwsKmsError;
-
-//     type Options = AwsKmsKeyOptions;
-//     type Key = Vec<u8>;
-
-//     // [preferred value](https://docs.aws.amazon.com/kms/latest/developerguide/importing-keys-get-public-key-and-token.html#select-wrapping-key-spec)
-//     const WRAPPING_KEY_SPEC: WrappingKeySpec = WrappingKeySpec::Rsa4096;
-//     // const WRAPPING_KEY_ALG: AlgorithmSpec = AlgorithmSpec::RsaAesKeyWrapSha256;
-//     // using RSAES_OAEP_SHA_256 for first impl, consider updating to the above in the future
-//     const WRAPPING_KEY_ALG: AlgorithmSpec = AlgorithmSpec::RsaesOaepSha256;
-
-//     // #[cfg_attr(not(feature = "send-sync-storage"), async_trait(?Send))]
-//     // #[cfg_attr(feature = "send-sync-storage", async_trait)]
-//     impl AwsKmsStorage {
-//         //     async fn insert(&self, jwk: Jwk) -> KeyStorageResult<KeyId> {
-//         pub(crate) async fn insert_key_with_options(
-//             &self,
-//             key: &Key,
-//             options: Options,
-//         ) -> Result<(String, Vec<u8>)> {
-//             // // Step 1: Create a KMS key with no key material
-//             // // If no alias is provided, generate a unique one
-//             // let key_alias = options
-//             //     .alias
-//             //     .unwrap_or_else(|| format!("{}", Uuid::new_v4()));
-
-//             // self.client
-//             //     .create_alias()
-//             //     .set_alias_name(Some(key_alias.clone()));
-
-//             // // Create KMS key for signing with secp256r1 (ECC_NIST_P256)
-//             // let key_spec: KeySpec = options
-//             //     .key_spec
-//             //     .and_then(|adapter_key_spec| Some(adapter_key_spec.try_into()))
-//             //     .transpose()?
-//             //     .unwrap(); // TODO: proper error on undefined
-//             // let mut create_key = self
-//             //     .client
-//             //     .create_key()
-//             //     .key_usage(aws_sdk_kms::types::KeyUsageType::SignVerify)
-//             //     .key_spec(key_spec.clone());
-
-//             // // create an empty key and do NOT generate key material for given key
-//             // create_key = create_key.origin(OriginType::External);
-
-//             // if let Some(description) = &options.description {
-//             //     create_key = create_key.description(description);
-//             // } else {
-//             //     create_key = create_key.description(format!(
-//             //         "IOTA Secret Storage Key ({key_spec}) - {key_alias}",
-//             //     ));
-//             // }
-
-//             // if let Some(policy) = &options.policy {
-//             //     create_key = create_key.policy(policy);
-//             // }
-
-//             // // Add tags if provided
-//             // if !options.tags.is_empty() {
-//             //     let tags: Vec<_> = options
-//             //         .tags
-//             //         .iter()
-//             //         .map(|(k, v)| {
-//             //             aws_sdk_kms::types::Tag::builder()
-//             //                 .tag_key(k)
-//             //                 .tag_value(v)
-//             //                 .build()
-//             //                 .unwrap()
-//             //         })
-//             //         .collect();
-//             //     create_key = create_key.set_tags(Some(tags));
-//             // }
-
-//             // // Execute KMS key creation
-//             // let create_response = create_key
-//             //     .send()
-//             //     .await
-//             //     .map_err(|e| AwsKmsError::General(format!("Failed to create KMS key: {}", e)))?;
-
-//             // let kms_key_id = create_response
-//             //     .key_metadata
-//             //     .map(|metadata| metadata.key_id)
-//             //     .ok_or_else(|| AwsKmsError::General("No key ID returned from KMS".to_string()))?;
-
-//             // // Create the alias for the key (AWS requires 'alias/' prefix)
-//             // let aws_alias_name = format!("alias/{}", key_alias);
-
-//             // self.client
-//             //     .create_alias()
-//             //     .alias_name(&aws_alias_name)
-//             //     .target_key_id(&kms_key_id)
-//             //     .send()
-//             //     .await
-//             //     .map_err(|e| AwsKmsError::General(format!("Failed to create alias: {}", e)))?;
-
-//             // // Step 2: Download the wrapping public key and import token
-//             // let import_params = self
-//             //     .client
-//             //     .get_parameters_for_import()
-//             //     .key_id(&kms_key_id)
-//             //     .wrapping_key_spec(WRAPPING_KEY_SPEC)
-//             //     .wrapping_algorithm(WRAPPING_KEY_ALG)
-//             //     .send()
-//             //     .await
-//             //     .unwrap();
-//             // dbg!(&import_params);
-//             // println!(
-//             //     "public key: {:#?}",
-//             //     import_params.public_key().unwrap().clone().into_inner()
-//             // );
-
-//             // todo!("private key wrapping and actual import");
-
-//             // Step 3: Encrypt the key material
-
-//             // Step 4: Import the key material
-
-//             let token_bytes = vec![
-//                 1, 1, 2, 0, 120, 112, 188, 96, 156, 215, 154, 239, 96, 158, 238, 44, 111, 14, 40,
-//                 22, 147, 11, 128, 123, 81, 174, 225, 24, 5, 159, 138, 157, 114, 0, 16, 99, 237, 0,
-//                 0, 13, 96, 48, 130, 13, 92, 6, 9, 42, 134, 72, 134, 247, 13, 1, 7, 6, 160, 130, 13,
-//                 77, 48, 130, 13, 73, 2, 1, 0, 48, 130, 13, 66, 6, 9, 42, 134, 72, 134, 247, 13, 1,
-//                 7, 1, 48, 30, 6, 9, 96, 134, 72, 1, 101, 3, 4, 1, 46, 48, 17, 4, 12, 95, 22, 240,
-//                 96, 64, 195, 169, 220, 92, 236, 224, 11, 2, 1, 16, 128, 130, 13, 19, 254, 57, 152,
-//                 153, 106, 237, 42, 183, 6, 198, 113, 18, 168, 46, 179, 204, 59, 10, 223, 113, 184,
-//                 205, 91, 14, 49, 38, 9, 220, 152, 2, 123, 144, 64, 217, 109, 185, 243, 125, 125,
-//                 130, 57, 224, 119, 171, 4, 247, 147, 38, 27, 75, 243, 10, 140, 254, 105, 141, 151,
-//                 92, 172, 61, 198, 25, 192, 20, 151, 55, 188, 91, 52, 48, 67, 103, 69, 11, 86, 195,
-//                 53, 177, 139, 21, 122, 116, 30, 189, 137, 251, 248, 207, 168, 92, 65, 209, 233,
-//                 216, 113, 212, 95, 164, 221, 118, 27, 110, 22, 73, 210, 174, 142, 110, 248, 153,
-//                 186, 113, 128, 120, 154, 89, 127, 147, 234, 26, 199, 172, 150, 6, 51, 101, 200,
-//                 186, 132, 93, 145, 32, 29, 238, 174, 139, 103, 21, 102, 208, 112, 5, 81, 103, 151,
-//                 193, 195, 177, 132, 243, 205, 10, 213, 203, 26, 144, 225, 227, 67, 74, 186, 139,
-//                 103, 197, 254, 69, 206, 78, 24, 0, 80, 29, 160, 26, 144, 87, 171, 237, 191, 241,
-//                 63, 176, 75, 219, 41, 26, 120, 166, 237, 229, 61, 176, 242, 180, 224, 215, 106, 95,
-//                 58, 64, 230, 2, 97, 202, 207, 22, 132, 56, 204, 176, 93, 177, 134, 112, 57, 100,
-//                 171, 78, 212, 147, 33, 218, 92, 31, 9, 20, 148, 158, 166, 102, 87, 165, 39, 138,
-//                 26, 193, 123, 167, 239, 84, 170, 32, 90, 182, 127, 17, 254, 144, 172, 185, 189,
-//                 198, 16, 98, 73, 246, 221, 221, 177, 224, 48, 136, 34, 78, 69, 168, 167, 57, 28,
-//                 136, 62, 19, 122, 158, 153, 125, 41, 67, 123, 208, 233, 109, 10, 211, 62, 222, 114,
-//                 221, 44, 172, 183, 122, 249, 161, 50, 255, 59, 210, 88, 193, 22, 199, 167, 162,
-//                 108, 193, 94, 59, 151, 57, 109, 7, 212, 235, 37, 208, 36, 6, 179, 90, 149, 148, 58,
-//                 213, 107, 4, 155, 21, 113, 123, 28, 48, 64, 205, 147, 81, 117, 184, 9, 123, 218,
-//                 242, 32, 7, 124, 52, 134, 169, 78, 54, 230, 148, 45, 144, 2, 194, 98, 199, 161, 64,
-//                 211, 1, 232, 49, 52, 145, 100, 108, 81, 80, 120, 76, 51, 202, 100, 96, 79, 4, 147,
-//                 240, 161, 54, 116, 7, 147, 180, 156, 15, 54, 174, 25, 137, 186, 138, 229, 109, 78,
-//                 233, 80, 97, 130, 104, 84, 80, 116, 145, 13, 181, 148, 225, 166, 194, 189, 9, 17,
-//                 229, 160, 241, 38, 63, 117, 196, 95, 119, 13, 137, 41, 138, 37, 211, 38, 190, 134,
-//                 198, 148, 124, 45, 46, 103, 191, 28, 58, 151, 64, 91, 165, 142, 250, 159, 13, 140,
-//                 185, 39, 215, 120, 191, 143, 132, 90, 137, 134, 114, 83, 240, 50, 27, 133, 208,
-//                 215, 63, 116, 133, 18, 56, 219, 160, 32, 121, 86, 233, 85, 133, 179, 44, 32, 197,
-//                 77, 93, 180, 114, 68, 70, 192, 109, 205, 181, 223, 203, 242, 252, 98, 218, 131,
-//                 167, 85, 155, 44, 248, 188, 229, 100, 131, 34, 19, 62, 26, 4, 150, 27, 230, 168,
-//                 169, 37, 77, 12, 79, 240, 90, 105, 47, 199, 44, 97, 106, 219, 159, 19, 41, 201,
-//                 164, 198, 163, 77, 10, 161, 8, 213, 171, 75, 136, 166, 57, 118, 21, 88, 135, 45,
-//                 104, 108, 151, 141, 35, 155, 196, 193, 102, 80, 205, 50, 202, 129, 131, 240, 134,
-//                 69, 52, 30, 177, 212, 34, 64, 87, 177, 32, 38, 185, 141, 98, 113, 207, 161, 25, 25,
-//                 27, 53, 28, 63, 225, 249, 108, 149, 179, 237, 179, 47, 72, 39, 100, 218, 168, 176,
-//                 164, 114, 6, 209, 14, 202, 191, 204, 31, 134, 10, 61, 117, 163, 9, 252, 252, 45,
-//                 13, 2, 128, 100, 87, 190, 9, 240, 83, 144, 18, 95, 184, 90, 205, 215, 147, 94, 152,
-//                 217, 161, 23, 204, 43, 172, 87, 130, 128, 146, 214, 64, 93, 36, 113, 158, 184, 196,
-//                 78, 51, 189, 229, 22, 199, 152, 190, 5, 2, 75, 160, 243, 151, 115, 250, 120, 237,
-//                 24, 162, 32, 32, 85, 133, 4, 227, 76, 27, 246, 2, 87, 139, 142, 192, 167, 1, 79,
-//                 62, 70, 57, 199, 150, 49, 189, 97, 213, 118, 205, 109, 233, 230, 25, 118, 81, 215,
-//                 29, 69, 27, 59, 210, 183, 68, 158, 55, 118, 214, 167, 161, 23, 27, 55, 105, 230, 0,
-//                 127, 192, 48, 122, 234, 118, 45, 127, 104, 192, 52, 164, 156, 47, 86, 91, 170, 107,
-//                 10, 76, 140, 245, 203, 53, 238, 97, 35, 125, 211, 82, 202, 35, 73, 191, 193, 31,
-//                 72, 73, 251, 250, 102, 121, 101, 251, 54, 76, 96, 212, 202, 104, 240, 2, 76, 86,
-//                 30, 162, 186, 96, 248, 194, 95, 105, 70, 127, 252, 15, 191, 19, 142, 25, 78, 238,
-//                 144, 219, 21, 237, 98, 34, 69, 88, 36, 151, 244, 178, 249, 19, 80, 72, 97, 144, 99,
-//                 110, 10, 23, 91, 97, 144, 35, 195, 179, 51, 228, 199, 57, 139, 15, 216, 6, 137,
-//                 139, 35, 1, 115, 83, 118, 228, 126, 71, 12, 185, 4, 118, 55, 245, 211, 129, 252,
-//                 247, 67, 203, 227, 130, 90, 84, 19, 148, 183, 158, 241, 234, 31, 77, 27, 120, 232,
-//                 113, 124, 132, 90, 232, 238, 130, 199, 108, 202, 16, 64, 223, 154, 112, 145, 202,
-//                 228, 255, 117, 112, 240, 47, 77, 104, 252, 254, 231, 160, 59, 109, 158, 254, 214,
-//                 205, 160, 204, 38, 5, 53, 138, 184, 14, 222, 186, 20, 134, 142, 217, 40, 87, 192,
-//                 224, 250, 253, 74, 131, 46, 244, 212, 41, 211, 76, 27, 184, 34, 88, 86, 127, 130,
-//                 182, 233, 65, 154, 27, 89, 42, 141, 83, 53, 42, 103, 252, 45, 4, 186, 24, 93, 186,
-//                 145, 222, 175, 87, 161, 172, 108, 43, 28, 85, 58, 43, 148, 203, 98, 242, 241, 222,
-//                 74, 110, 217, 13, 14, 116, 234, 159, 22, 21, 236, 132, 133, 218, 135, 209, 217,
-//                 113, 218, 255, 98, 127, 253, 146, 189, 229, 139, 136, 46, 98, 232, 126, 235, 20,
-//                 48, 146, 81, 207, 194, 137, 79, 136, 75, 137, 180, 105, 251, 22, 201, 225, 34, 207,
-//                 5, 162, 69, 222, 234, 101, 109, 52, 114, 241, 144, 22, 250, 124, 103, 137, 136, 54,
-//                 207, 203, 63, 92, 10, 170, 136, 147, 179, 12, 25, 138, 138, 236, 103, 27, 222, 182,
-//                 85, 215, 109, 60, 66, 33, 116, 150, 200, 170, 60, 17, 57, 112, 210, 203, 190, 195,
-//                 107, 38, 188, 215, 240, 4, 248, 156, 113, 59, 102, 243, 167, 97, 199, 252, 1, 165,
-//                 76, 69, 249, 214, 33, 202, 5, 138, 86, 255, 169, 39, 190, 114, 61, 79, 37, 197,
-//                 166, 152, 183, 120, 115, 20, 181, 50, 158, 69, 165, 232, 23, 56, 192, 188, 87, 13,
-//                 210, 31, 83, 180, 64, 71, 123, 241, 84, 22, 79, 139, 204, 121, 127, 222, 221, 23,
-//                 220, 13, 232, 12, 11, 196, 156, 63, 165, 239, 3, 59, 160, 180, 47, 215, 228, 225,
-//                 226, 41, 56, 74, 115, 21, 214, 180, 17, 239, 109, 111, 77, 177, 160, 5, 51, 123,
-//                 26, 155, 109, 242, 217, 126, 162, 1, 110, 96, 33, 219, 123, 122, 158, 5, 29, 198,
-//                 140, 96, 167, 202, 147, 7, 53, 179, 35, 255, 241, 101, 124, 110, 103, 132, 237, 70,
-//                 215, 118, 117, 230, 66, 175, 134, 155, 126, 183, 13, 96, 133, 182, 45, 15, 214,
-//                 192, 147, 46, 179, 137, 170, 143, 147, 28, 78, 22, 179, 216, 213, 187, 41, 248,
-//                 105, 68, 122, 155, 252, 38, 108, 153, 218, 152, 7, 123, 108, 164, 29, 183, 218,
-//                 120, 163, 59, 214, 28, 190, 99, 245, 71, 179, 121, 8, 80, 47, 114, 236, 78, 147,
-//                 173, 253, 2, 51, 117, 186, 252, 23, 141, 212, 83, 162, 86, 243, 125, 25, 157, 199,
-//                 232, 116, 248, 43, 7, 163, 94, 175, 30, 242, 177, 93, 203, 178, 75, 70, 161, 155,
-//                 191, 12, 45, 110, 189, 131, 175, 208, 100, 29, 120, 184, 44, 118, 227, 49, 204,
-//                 248, 151, 229, 153, 128, 24, 121, 164, 58, 223, 194, 14, 126, 74, 181, 115, 6, 115,
-//                 73, 198, 166, 197, 53, 21, 75, 81, 105, 136, 29, 183, 72, 56, 55, 12, 251, 102, 62,
-//                 55, 37, 111, 49, 123, 82, 39, 72, 140, 83, 69, 147, 122, 107, 98, 146, 238, 216,
-//                 24, 217, 18, 208, 170, 131, 133, 238, 28, 31, 243, 70, 70, 67, 193, 92, 141, 123,
-//                 227, 154, 159, 36, 30, 116, 174, 103, 217, 228, 71, 110, 29, 145, 190, 88, 69, 146,
-//                 86, 177, 9, 194, 67, 211, 14, 48, 147, 177, 235, 107, 172, 106, 210, 232, 150, 113,
-//                 85, 75, 111, 107, 11, 169, 14, 186, 96, 24, 241, 34, 226, 164, 244, 154, 254, 156,
-//                 178, 52, 11, 195, 35, 252, 149, 95, 81, 2, 49, 252, 83, 174, 187, 161, 5, 82, 203,
-//                 208, 113, 253, 199, 37, 22, 121, 248, 126, 214, 153, 52, 58, 13, 131, 175, 57, 198,
-//                 67, 29, 30, 214, 204, 155, 113, 187, 209, 191, 76, 185, 82, 142, 120, 63, 103, 148,
-//                 203, 169, 27, 150, 60, 119, 201, 25, 27, 248, 231, 172, 99, 21, 174, 116, 189, 53,
-//                 153, 45, 176, 253, 47, 95, 123, 95, 37, 118, 33, 147, 75, 233, 41, 5, 28, 234, 254,
-//                 136, 247, 246, 71, 205, 144, 170, 252, 11, 116, 66, 230, 154, 151, 22, 146, 137,
-//                 16, 234, 132, 196, 94, 168, 174, 97, 32, 201, 132, 0, 54, 49, 226, 155, 191, 204,
-//                 234, 170, 112, 223, 185, 127, 145, 246, 113, 241, 168, 204, 213, 118, 77, 28, 122,
-//                 103, 195, 192, 173, 157, 39, 23, 187, 114, 40, 220, 86, 206, 238, 193, 190, 3, 186,
-//                 70, 118, 235, 18, 11, 253, 162, 60, 107, 57, 30, 4, 186, 207, 180, 166, 53, 189,
-//                 223, 195, 120, 196, 139, 178, 69, 209, 32, 19, 11, 48, 171, 141, 249, 97, 6, 145,
-//                 13, 136, 196, 13, 251, 122, 202, 38, 32, 114, 213, 175, 239, 123, 224, 55, 83, 57,
-//                 250, 250, 6, 85, 61, 237, 112, 117, 99, 67, 44, 234, 118, 255, 75, 42, 60, 44, 127,
-//                 52, 234, 76, 227, 3, 164, 135, 151, 66, 108, 58, 157, 94, 127, 95, 211, 16, 199,
-//                 101, 254, 77, 94, 23, 166, 211, 201, 211, 13, 254, 22, 224, 174, 245, 113, 175,
-//                 115, 58, 182, 110, 170, 47, 185, 178, 165, 80, 229, 245, 40, 108, 10, 145, 10, 191,
-//                 171, 91, 183, 18, 116, 83, 174, 90, 155, 20, 225, 70, 68, 41, 240, 236, 211, 31, 7,
-//                 68, 107, 192, 68, 182, 4, 165, 158, 74, 9, 122, 240, 247, 60, 190, 160, 58, 241,
-//                 133, 232, 16, 116, 214, 18, 42, 91, 191, 220, 198, 165, 87, 171, 133, 141, 181,
-//                 196, 115, 239, 37, 64, 152, 220, 113, 167, 53, 95, 116, 193, 12, 23, 25, 156, 216,
-//                 72, 140, 7, 156, 213, 116, 58, 68, 114, 55, 79, 146, 33, 127, 1, 105, 208, 131,
-//                 197, 21, 101, 247, 110, 136, 62, 113, 135, 101, 127, 94, 235, 138, 106, 149, 222,
-//                 67, 155, 171, 80, 250, 17, 215, 50, 89, 145, 54, 76, 232, 36, 119, 33, 113, 233,
-//                 192, 120, 17, 24, 9, 187, 237, 84, 245, 197, 161, 210, 51, 178, 69, 77, 220, 49,
-//                 90, 162, 209, 60, 242, 49, 21, 84, 96, 200, 211, 23, 30, 80, 165, 73, 73, 185, 240,
-//                 99, 163, 7, 146, 124, 20, 173, 61, 17, 32, 13, 115, 12, 101, 138, 13, 110, 148, 86,
-//                 106, 23, 4, 192, 60, 43, 12, 114, 8, 248, 15, 93, 27, 159, 30, 35, 186, 250, 153,
-//                 170, 226, 143, 48, 29, 13, 99, 214, 156, 160, 237, 181, 216, 1, 28, 50, 146, 62,
-//                 74, 37, 11, 217, 56, 115, 51, 117, 108, 42, 132, 2, 182, 208, 115, 135, 213, 172,
-//                 19, 132, 158, 163, 3, 40, 219, 235, 112, 205, 132, 68, 69, 158, 135, 222, 119, 230,
-//                 12, 75, 173, 192, 184, 63, 80, 169, 219, 246, 237, 143, 0, 131, 80, 49, 189, 231,
-//                 199, 204, 195, 95, 239, 35, 241, 42, 209, 49, 8, 226, 51, 174, 203, 181, 39, 61,
-//                 253, 108, 1, 198, 225, 172, 41, 110, 13, 106, 89, 157, 184, 168, 20, 98, 215, 88,
-//                 228, 5, 183, 133, 113, 107, 179, 191, 70, 39, 89, 135, 215, 36, 59, 73, 88, 197,
-//                 255, 227, 46, 187, 185, 34, 253, 27, 151, 78, 127, 247, 238, 15, 15, 232, 134, 213,
-//                 209, 165, 5, 201, 76, 35, 84, 183, 106, 112, 176, 18, 184, 87, 57, 253, 101, 59,
-//                 34, 184, 108, 54, 10, 53, 206, 219, 135, 30, 0, 6, 76, 130, 40, 24, 114, 122, 182,
-//                 122, 25, 188, 100, 134, 135, 97, 161, 2, 208, 146, 252, 1, 194, 42, 49, 197, 122,
-//                 50, 190, 36, 238, 67, 59, 63, 192, 215, 121, 95, 237, 11, 166, 118, 186, 245, 195,
-//                 140, 227, 19, 19, 58, 111, 18, 205, 202, 144, 228, 250, 155, 9, 172, 100, 118, 133,
-//                 97, 91, 226, 91, 17, 10, 98, 172, 152, 86, 85, 63, 149, 163, 213, 154, 237, 85,
-//                 161, 136, 219, 142, 177, 141, 79, 179, 199, 118, 6, 182, 43, 123, 177, 29, 119, 26,
-//                 116, 227, 187, 70, 80, 171, 46, 214, 165, 100, 249, 88, 244, 57, 76, 21, 141, 203,
-//                 161, 125, 89, 126, 41, 235, 208, 191, 21, 234, 10, 131, 217, 47, 215, 111, 156,
-//                 131, 52, 107, 93, 22, 57, 98, 47, 220, 179, 125, 207, 113, 250, 242, 42, 3, 17,
-//                 144, 221, 85, 26, 109, 222, 4, 139, 217, 88, 80, 37, 86, 158, 61, 138, 107, 139,
-//                 200, 81, 104, 243, 19, 3, 80, 140, 252, 167, 212, 160, 241, 90, 221, 161, 138, 46,
-//                 169, 15, 87, 159, 49, 235, 232, 51, 113, 64, 75, 38, 13, 133, 58, 107, 253, 215,
-//                 36, 232, 11, 221, 16, 174, 234, 156, 186, 1, 184, 166, 133, 92, 45, 2, 170, 41,
-//                 136, 27, 236, 216, 86, 104, 97, 193, 34, 204, 51, 136, 192, 0, 61, 196, 112, 192,
-//                 79, 163, 163, 97, 8, 183, 120, 63, 206, 60, 143, 55, 7, 113, 238, 95, 143, 5, 106,
-//                 172, 74, 2, 78, 10, 106, 13, 248, 212, 162, 61, 132, 169, 89, 38, 143, 108, 138,
-//                 240, 234, 35, 28, 204, 142, 127, 99, 186, 37, 48, 127, 227, 237, 209, 188, 24, 59,
-//                 156, 207, 231, 100, 82, 169, 69, 10, 72, 59, 145, 140, 94, 164, 191, 146, 141, 4,
-//                 82, 237, 136, 70, 196, 242, 219, 19, 138, 85, 208, 82, 84, 52, 137, 61, 19, 151,
-//                 81, 40, 105, 83, 159, 158, 215, 173, 203, 205, 89, 7, 90, 116, 113, 98, 130, 232,
-//                 36, 113, 37, 65, 23, 34, 222, 145, 86, 81, 182, 173, 140, 157, 203, 98, 47, 85,
-//                 113, 159, 61, 239, 157, 164, 203, 3, 157, 73, 90, 82, 41, 130, 163, 210, 216, 109,
-//                 144, 49, 44, 105, 129, 3, 133, 160, 182, 172, 110, 238, 249, 194, 115, 35, 100, 90,
-//                 212, 19, 120, 24, 136, 214, 255, 91, 228, 159, 54, 207, 253, 252, 202, 204, 16, 49,
-//                 7, 207, 125, 6, 129, 68, 30, 192, 109, 125, 124, 91, 214, 105, 255, 27, 2, 127, 62,
-//                 194, 210, 103, 233, 172, 4, 114, 213, 44, 99, 165, 109, 79, 23, 135, 66, 162, 76,
-//                 38, 135, 245, 14, 159, 51, 63, 247, 171, 141, 29, 183, 240, 224, 52, 125, 184, 63,
-//                 84, 210, 2, 204, 42, 96, 79, 233, 95, 23, 206, 27, 105, 11, 105, 134, 125, 214,
-//                 180, 152, 170, 103, 184, 147, 163, 189, 135, 113, 152, 60, 79, 247, 187, 70, 47,
-//                 254, 162, 240, 155, 14, 36, 179, 21, 80, 195, 86, 139, 171, 79, 186, 61, 218, 153,
-//                 27, 210, 186, 107, 67, 171, 53, 190, 46, 81, 212, 218, 77, 182, 112, 141, 228, 114,
-//                 200, 60, 46, 240, 20, 179, 122, 212, 55, 244, 22, 127, 218, 209, 92, 75, 126, 159,
-//                 33, 82, 13, 80, 98, 46, 135, 0, 21, 89, 107, 76, 91, 55, 210, 207, 16, 225, 30, 4,
-//                 119, 227, 225, 251, 30, 216, 24, 143, 228, 205, 255, 153, 244, 75, 220, 171, 127,
-//                 58, 227, 159, 75, 122, 35, 143, 220, 154, 144, 214, 181, 0, 64, 103, 200, 160, 236,
-//                 88, 151, 41, 253, 54, 33, 213, 74, 197, 214, 175, 175, 55, 189, 221, 249, 72, 241,
-//                 220, 11, 55, 102, 46, 149, 4, 209, 49, 47, 136, 26, 117, 168, 13, 23, 234, 55, 197,
-//                 101, 72, 24, 247, 105, 74, 222, 120, 117, 177, 255, 234, 14, 154, 20, 8, 100, 25,
-//                 49, 47, 233, 180, 35, 38, 68, 219, 88, 32, 21, 34, 143, 4, 249, 32, 245, 45, 172,
-//                 163, 240, 1, 45, 167, 133, 107, 64, 180, 35, 153, 81, 230, 120, 252, 115, 126, 49,
-//                 218, 117, 158, 140, 149, 198, 238, 202, 120, 10, 114, 197, 50, 58, 97, 169, 137,
-//                 73, 245, 146, 224, 210, 212, 246, 94, 103, 206, 143, 150, 40, 238, 37, 127, 144,
-//                 110, 15, 14, 76, 205, 138, 92, 97, 248, 251, 97, 254, 28, 197, 180, 114, 73, 158,
-//                 44, 13, 47, 154, 116, 133, 255, 86, 98, 138, 80, 5, 176, 102, 39, 183, 131, 223,
-//                 27, 161, 70, 187, 78, 136, 162, 164, 180, 105, 248, 39, 145, 64, 87, 185, 46, 138,
-//                 177, 110, 229, 180, 190, 79, 122, 234, 44, 202, 187, 147, 177, 138, 116, 21, 63,
-//                 215, 143, 73, 9, 235, 142, 108, 6, 36, 198, 15, 37, 163, 103, 118, 92, 43, 210, 79,
-//                 105, 43, 86, 17, 66, 44, 121, 185, 178, 151, 238, 171, 161, 157, 218, 255, 98, 127,
-//                 29, 229, 108, 15, 3, 181, 75, 226, 193, 69, 87, 187, 218, 165, 174, 65, 3, 58, 104,
-//                 31, 78, 225, 123, 76, 241, 7, 89, 137, 222, 213, 209, 152, 0, 213, 16, 201, 254,
-//                 11, 130, 19, 86, 233, 33, 89, 90, 34, 244, 60, 44, 162, 40, 133, 17, 14, 246, 169,
-//                 85, 113, 169, 132, 55, 236, 253, 30, 151, 180, 77, 183, 203, 102, 149, 211, 189,
-//                 187, 252, 46, 162, 190, 217, 242, 8, 129, 114, 21, 138, 212, 44, 132, 232, 35, 86,
-//                 57, 243, 170, 209, 217, 44, 182, 191, 143, 121, 49, 13, 19, 189, 124, 145, 117,
-//                 164, 13, 243, 134, 15, 212, 32, 230, 166, 46, 232, 70, 227, 158, 171, 96, 181, 215,
-//                 107, 125, 178, 80, 232, 132, 67, 46, 79, 97, 83, 32, 180, 243, 52, 208, 55, 73,
-//                 232, 235, 210, 163, 118, 104, 41, 224, 147, 212, 194, 130, 213, 16, 136, 159, 77,
-//                 31, 13, 70, 12, 104, 65, 85, 119, 44, 3, 191, 62, 135, 32, 47, 45, 68, 157, 157,
-//                 198, 62, 248, 132, 142, 83, 174, 78, 159, 142, 84, 173, 178, 85, 242, 179, 90, 79,
-//                 55, 48, 79, 150, 9, 233, 30, 158, 222, 202, 206, 56, 164, 20, 227, 59, 137, 1, 54,
-//                 51, 5, 228, 46, 163, 17, 162, 30, 45, 143, 199, 141, 82, 198, 188, 148, 96, 78,
-//                 118, 160, 64, 231, 194, 175, 252, 75, 63, 153, 235, 232, 19, 234, 42, 234, 62, 232,
-//                 230, 115, 179, 185, 56, 234, 205, 34, 127, 143, 115, 237, 117, 17, 38, 204, 131,
-//                 111, 133, 129, 215, 185, 70, 173, 239, 109, 227, 142, 6, 71, 46, 150, 107, 164,
-//                 123, 144, 73, 139, 90, 210, 210, 22, 137, 222, 255, 130, 151, 91, 103, 211, 158,
-//                 88, 51, 229, 255, 110, 90, 108, 142, 134, 112, 187, 184, 91, 221, 240, 145, 234,
-//                 243, 203, 201, 29, 217, 255, 119, 34, 182, 52, 65, 232, 31, 43, 198, 29, 171, 185,
-//                 248,
-//             ];
-//             let encrypted_key_material = vec![
-//                 5, 113, 41, 242, 236, 12, 73, 106, 161, 109, 116, 188, 157, 191, 67, 46, 107, 131,
-//                 198, 94, 183, 153, 84, 236, 95, 26, 163, 44, 84, 33, 35, 71, 243, 34, 45, 221, 252,
-//                 79, 100, 74, 82, 106, 121, 213, 169, 169, 202, 166, 25, 91, 61, 184, 176, 72, 181,
-//                 196, 37, 221, 102, 26, 86, 5, 70, 51, 83, 132, 248, 53, 216, 187, 31, 153, 95, 220,
-//                 164, 0, 116, 67, 98, 58, 192, 39, 4, 124, 100, 44, 18, 161, 111, 43, 120, 188, 233,
-//                 142, 70, 244, 17, 203, 217, 118, 20, 218, 88, 80, 1, 4, 215, 221, 169, 63, 140,
-//                 238, 180, 193, 149, 96, 191, 88, 115, 96, 215, 56, 251, 202, 188, 163, 241, 62,
-//                 246, 158, 183, 239, 188, 252, 50, 139, 93, 218, 47, 126, 20, 113, 241, 66, 124,
-//                 233, 173, 191, 34, 252, 246, 162, 223, 74, 131, 162, 161, 250, 94, 89, 58, 19, 72,
-//                 206, 163, 63, 248, 165, 195, 71, 122, 221, 3, 211, 174, 47, 149, 128, 113, 235, 70,
-//                 32, 10, 90, 227, 121, 23, 40, 254, 97, 110, 220, 153, 147, 57, 90, 116, 88, 32, 14,
-//                 27, 150, 189, 183, 118, 23, 240, 65, 219, 132, 182, 51, 80, 26, 78, 121, 86, 54,
-//                 97, 191, 202, 53, 46, 83, 157, 216, 24, 238, 152, 214, 121, 72, 213, 47, 184, 205,
-//                 191, 172, 181, 201, 230, 231, 232, 70, 113, 118, 34, 13, 142, 40, 79, 26, 146, 232,
-//                 21, 118, 19, 180, 173, 231, 59, 66, 100, 62, 201, 80, 193, 221, 232, 253, 84, 95,
-//                 52, 13, 85, 167, 148, 237, 43, 111, 149, 143, 225, 177, 112, 94, 180, 51, 14, 88,
-//                 16, 194, 93, 44, 101, 110, 214, 123, 83, 78, 166, 155, 105, 194, 64, 17, 98, 205,
-//                 63, 248, 123, 142, 126, 192, 41, 76, 195, 57, 216, 74, 73, 167, 67, 108, 253, 129,
-//                 76, 152, 117, 54, 148, 181, 28, 219, 160, 210, 74, 43, 197, 147, 47, 182, 20, 153,
-//                 67, 30, 10, 27, 137, 170, 22, 111, 4, 157, 65, 211, 1, 145, 61, 142, 38, 2, 15,
-//                 101, 193, 72, 70, 86, 199, 6, 21, 73, 238, 140, 195, 40, 87, 247, 216, 113, 139,
-//                 22, 85, 3, 125, 166, 74, 118, 217, 179, 65, 122, 220, 180, 135, 89, 187, 106, 41,
-//                 83, 230, 233, 154, 240, 162, 198, 95, 10, 116, 52, 24, 130, 118, 247, 219, 31, 64,
-//                 144, 139, 80, 253, 24, 226, 123, 175, 96, 99, 241, 196, 200, 16, 150, 182, 12, 16,
-//                 82, 96, 134, 75, 129, 52, 75, 141, 169, 108, 199, 47, 111, 226, 144, 71, 204, 186,
-//                 27, 201, 226, 9, 195, 46, 44, 95, 151, 57, 179, 116, 102, 126, 10, 200, 124, 8,
-//                 205, 40, 101, 131, 148, 18, 80, 60, 114, 103, 202, 158, 41, 194, 58, 207, 158, 161,
-//                 242, 18, 63, 54, 242, 117, 195, 119, 84, 180, 95, 1, 236, 209, 121, 10, 140, 12,
-//                 145, 207, 149, 21, 205,
-//             ];
-//             self.client
-//                 .import_key_material()
-//                 .expiration_model(ExpirationModelType::KeyMaterialDoesNotExpire)
-//                 .key_id("a3d09145-a1b9-4c14-8f5e-4c6563f122d9")
-//                 .import_token(Blob::new(token_bytes))
-//                 .encrypted_key_material(Blob::new(encrypted_key_material))
-//                 .send()
-//                 .await
-//                 .unwrap();
-
-//             todo!();
-//             // // Get the public key immediately after creation using the alias
-//             // let public_key_response = self
-//             //     .client
-//             //     .get_public_key()
-//             //     .key_id(&aws_alias_name)
-//             //     .send()
-//             //     .await
-//             //     .map_err(|e| AwsKmsError::General(format!("Failed to get public key: {}", e)))?;
-
-//             // let public_key_der = public_key_response
-//             //     .public_key
-//             //     .ok_or_else(|| AwsKmsError::General("No public key returned from KMS".to_string()))?
-//             //     .into_inner();
-
-//             // // Return the original alias as the key identifier (without 'alias/' prefix for user display)
-//             // // Ok((key_alias, public_key_der))
-//             // Ok((kms_key_id, public_key_der))
-//         }
-//     }
-// }

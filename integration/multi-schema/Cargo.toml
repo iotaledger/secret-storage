@@ -1,0 +1,8 @@
+[package]
+name = "multi-schema"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+strum = { version = "0.27", features = ["derive"] }
+secret-storage = { path = "../../core/secret-storage" }
