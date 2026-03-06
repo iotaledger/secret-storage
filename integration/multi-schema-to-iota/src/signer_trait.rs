@@ -25,9 +25,10 @@ type Blake2b256 = Blake2b<typenum::U32>;
 
 #[cfg_attr(not(feature = "send-sync-storage"), async_trait(?Send))]
 #[cfg_attr(feature = "send-sync-storage", async_trait)]
-impl<T> Signer<SignatureSchemeIota> for IotaCompatibleSigner<T>
+impl<TSigner, TKeyId> Signer<SignatureSchemeIota> for IotaCompatibleSigner<TSigner>
 where
-    T: Signer<SignatureSchemeMulti, KeyId = String> + OptionalSync,
+    TSigner: Signer<SignatureSchemeMulti, KeyId = TKeyId> + OptionalSync,
+    TKeyId: Into<String>,
 {
     type KeyId = String;
 
@@ -68,7 +69,7 @@ where
     }
 
     fn key_id(&self) -> Self::KeyId {
-        self.inner.key_id().to_string()
+        self.inner.key_id().into()
     }
 }
 

@@ -4,13 +4,13 @@
 use async_trait::async_trait;
 use iota_interaction::IotaKeySignature;
 use iota_interaction::OptionalSync;
+use multi_schema::KeyIdDefinition;
 use multi_schema::SignatureSchemeMulti;
 use multi_schema::SignatureSchemeMultiSignatureType;
 use secret_storage::KeyDelete;
 use secret_storage::KeyExist;
 use secret_storage::KeyGenerate;
 use secret_storage::KeyGet;
-use secret_storage::KeySign;
 use secret_storage::KeySignWithAlgorithm;
 use secret_storage::Result;
 use secret_storage::SignatureScheme as SecretStorageSignatureScheme;
@@ -24,9 +24,7 @@ use crate::utils::convert_public_key_der_to_iota_public_key;
 #[cfg_attr(feature = "send-sync-storage", async_trait)]
 impl<TInner> KeyGenerate<IotaKeySignature, String> for IotaCompatibleKeyStorage<TInner>
 where
-    TInner: KeyGenerate<SignatureSchemeMulti, String>
-        + KeySign<SignatureSchemeMulti, String>
-        + OptionalSync,
+    TInner: KeyGenerate<SignatureSchemeMulti, TInner::KeyId> + KeyIdDefinition + OptionalSync,
 {
     type Options = TInner::Options;
 
@@ -46,21 +44,21 @@ where
         )
         .unwrap();
 
-        Ok((key_id, public_key_iota))
+        Ok((key_id.into(), public_key_iota))
     }
 }
 
 impl<TInner> KeySignWithAlgorithm<IotaKeySignature, String, SignatureSchemeMultiSignatureType>
     for IotaCompatibleKeyStorage<TInner>
 where
-    TInner: KeyGenerate<SignatureSchemeMulti, String>
-        + KeySignWithAlgorithm<SignatureSchemeMulti, String, SignatureSchemeMultiSignatureType>
+    TInner: KeySignWithAlgorithm<SignatureSchemeMulti, TInner::KeyId, SignatureSchemeMultiSignatureType>
+        + KeyIdDefinition
         + OptionalSync,
     <TInner as KeySignWithAlgorithm<
         SignatureSchemeMulti,
-        String,
+        TInner::KeyId,
         SignatureSchemeMultiSignatureType,
-    >>::Signer: Signer<SignatureSchemeMulti, KeyId = String> + OptionalSync,
+    >>::Signer: Signer<SignatureSchemeMulti, KeyId = TInner::KeyId> + OptionalSync,
 {
     type Signer = IotaCompatibleSigner<TInner::Signer>;
     fn get_signer_with_algorithm(
@@ -70,7 +68,7 @@ where
     ) -> Result<Self::Signer> {
         let multi_signer = self
             .inner
-            .get_signer_with_algorithm(&key_id.to_string(), algorithm)
+            .get_signer_with_algorithm(&to_inner_key_id::<TInner>(key_id)?, algorithm)
             .unwrap();
         let iota_signer = IotaCompatibleSigner {
             inner: multi_signer,
@@ -83,13 +81,17 @@ where
 #[cfg_attr(feature = "send-sync-storage", async_trait)]
 impl<TInner> KeyGet<IotaKeySignature, String> for IotaCompatibleKeyStorage<TInner>
 where
-    TInner: KeyGet<SignatureSchemeMulti, String> + OptionalSync,
+    TInner: KeyGet<SignatureSchemeMulti, TInner::KeyId> + KeyIdDefinition + OptionalSync,
 {
     async fn public_key(
         &self,
         key_id: &String,
     ) -> Result<<IotaKeySignature as SecretStorageSignatureScheme>::PublicKey> {
-        let public_key_multi = self.inner.public_key(key_id).await.unwrap();
+        let public_key_multi = self
+            .inner
+            .public_key(&to_inner_key_id::<TInner>(key_id)?)
+            .await
+            .unwrap();
 
         let public_key_iota = convert_public_key_der_to_iota_public_key(
             &public_key_multi.bytes,
@@ -105,10 +107,10 @@ where
 #[cfg_attr(feature = "send-sync-storage", async_trait)]
 impl<TInner> KeyDelete<String> for IotaCompatibleKeyStorage<TInner>
 where
-    TInner: KeyDelete<String> + OptionalSync,
+    TInner: KeyDelete<TInner::KeyId> + KeyIdDefinition + OptionalSync,
 {
     async fn delete(&self, key_id: &String) -> Result<()> {
-        self.inner.delete(key_id).await
+        self.inner.delete(&to_inner_key_id::<TInner>(key_id)?).await
     }
 }
 
@@ -117,9 +119,18 @@ where
 #[cfg_attr(feature = "send-sync-storage", async_trait)]
 impl<TInner> KeyExist<String> for IotaCompatibleKeyStorage<TInner>
 where
-    TInner: KeyExist<String> + OptionalSync,
+    TInner: KeyExist<TInner::KeyId> + KeyIdDefinition + OptionalSync,
 {
     async fn exist(&self, key_id: &String) -> Result<bool> {
-        self.inner.exist(key_id).await
+        self.inner.exist(&to_inner_key_id::<TInner>(key_id)?).await
     }
+}
+
+fn to_inner_key_id<T>(key_id: &String) -> secret_storage::Result<T::KeyId>
+where
+    T: KeyIdDefinition,
+{
+    key_id.clone().try_into().map_err(|_| {
+        secret_storage::Error::InvalidConfig("Failed to parse inner key_id from input.".to_string())
+    })
 }
