@@ -3,9 +3,8 @@
 
 use aws_sdk_kms::types::KeySpec as AwsKeySpec;
 use aws_sdk_kms::types::SigningAlgorithmSpec as AwsSigningAlgorithmSpec;
-use identity_iota::storage::KeyType;
-use multi_schema::SignatureSchemeMultiPublicKeyType;
-use multi_schema::SignatureSchemeMultiSignatureType;
+use identity_iota::storage::KeyType as IdentityStorageKeyType;
+use multi_schema::KeyType;
 use serde::Deserialize;
 use serde::Serialize;
 use std::env;
@@ -154,65 +153,34 @@ impl TryInto<KeySpec> for AwsKeySpec {
   }
 }
 
-impl Into<KeyType> for KeySpec {
-  fn into(self) -> KeyType {
-    KeyType::from_static_str(self.into())
+impl Into<IdentityStorageKeyType> for KeySpec {
+  fn into(self) -> IdentityStorageKeyType {
+    IdentityStorageKeyType::from_static_str(self.into())
   }
 }
 
-impl TryFrom<KeySpec> for SignatureSchemeMultiPublicKeyType {
-  type Error = anyhow::Error;
-
-  fn try_from(value: KeySpec) -> Result<Self, Self::Error> {
-    let key_type = match value {
-      crate::KeySpec::EccNistP256 => Self::P256Der,
-      crate::KeySpec::EccSecgP256K1 => Self::K256Der,
-      crate::KeySpec::EccNistEdwards25519 => Self::Ed25519K256Der,
-    };
-
-    Ok(key_type)
-  }
-}
-
-impl TryFrom<SignatureSchemeMultiPublicKeyType> for KeySpec {
-  type Error = anyhow::Error;
-
-  fn try_from(value: SignatureSchemeMultiPublicKeyType) -> Result<Self, Self::Error> {
-    let key_spec = match value {
-      SignatureSchemeMultiPublicKeyType::P256Der => Self::EccNistP256,
-      SignatureSchemeMultiPublicKeyType::K256Der => Self::EccSecgP256K1,
-      SignatureSchemeMultiPublicKeyType::Ed25519K256Der => Self::EccNistEdwards25519,
-      other => {
-        anyhow::bail!("unsupported key type '{other}'")
-      }
-    };
-
-    Ok(key_spec)
-  }
-}
-
-impl TryFrom<KeySpec> for SignatureSchemeMultiSignatureType {
+impl TryFrom<KeySpec> for KeyType {
   type Error = anyhow::Error;
 
   fn try_from(value: KeySpec) -> Result<Self, Self::Error> {
     let key_type = match value {
       crate::KeySpec::EccNistP256 => Self::P256DerEncoded,
       crate::KeySpec::EccSecgP256K1 => Self::K256DerEncoded,
-      crate::KeySpec::EccNistEdwards25519 => Self::Ed25519K256DerEncoded,
+      crate::KeySpec::EccNistEdwards25519 => Self::Ed25519DerEncoded,
     };
 
     Ok(key_type)
   }
 }
 
-impl TryFrom<SignatureSchemeMultiSignatureType> for KeySpec {
+impl TryFrom<KeyType> for KeySpec {
   type Error = anyhow::Error;
 
-  fn try_from(value: SignatureSchemeMultiSignatureType) -> Result<Self, Self::Error> {
+  fn try_from(value: KeyType) -> Result<Self, Self::Error> {
     let key_spec = match value {
-      SignatureSchemeMultiSignatureType::P256DerEncoded => Self::EccNistP256,
-      SignatureSchemeMultiSignatureType::K256DerEncoded => Self::EccSecgP256K1,
-      SignatureSchemeMultiSignatureType::Ed25519K256DerEncoded => Self::EccNistEdwards25519,
+      KeyType::P256DerEncoded => Self::EccNistP256,
+      KeyType::K256DerEncoded => Self::EccSecgP256K1,
+      KeyType::Ed25519DerEncoded => Self::EccNistEdwards25519,
       other => {
         anyhow::bail!("unsupported key type '{other}'")
       }
@@ -280,14 +248,14 @@ impl TryInto<SigningAlgorithmSpec> for AwsSigningAlgorithmSpec {
   }
 }
 
-impl TryInto<SigningAlgorithmSpec> for SignatureSchemeMultiSignatureType {
+impl TryInto<SigningAlgorithmSpec> for KeyType {
   type Error = AwsKmsError;
 
   fn try_into(self) -> Result<SigningAlgorithmSpec, Self::Error> {
     let alg = match self {
-      SignatureSchemeMultiSignatureType::Ed25519K256DerEncoded => SigningAlgorithmSpec::Ed25519Sha512,
-      SignatureSchemeMultiSignatureType::K256DerEncoded => SigningAlgorithmSpec::EcdsaSha256,
-      SignatureSchemeMultiSignatureType::P256DerEncoded => SigningAlgorithmSpec::EcdsaSha256,
+      KeyType::Ed25519DerEncoded => SigningAlgorithmSpec::Ed25519Sha512,
+      KeyType::K256DerEncoded => SigningAlgorithmSpec::EcdsaSha256,
+      KeyType::P256DerEncoded => SigningAlgorithmSpec::EcdsaSha256,
 
       _other => {
         return Err(AwsKmsError::UnsupportedKeyUsage(

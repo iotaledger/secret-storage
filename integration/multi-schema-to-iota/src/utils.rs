@@ -1,7 +1,7 @@
 use std::error::Error;
 
 use iota_interaction::types::crypto::SignatureScheme as IotaSignatureScheme;
-use multi_schema::SignatureSchemeMultiPublicKeyType;
+use multi_schema::KeyType;
 use pkcs8::DecodePublicKey as _;
 
 use iota_interaction::IotaKeySignature;
@@ -14,10 +14,10 @@ pub(crate) type SignatureSchemeIotaSignature = <IotaKeySignature as SignatureSch
 
 pub fn convert_public_key_der_to_iota_public_key(
     public_key_der: &Vec<u8>,
-    key_type: &SignatureSchemeMultiPublicKeyType,
+    key_type: &KeyType,
 ) -> Result<SignatureSchemeIotaPublicKey, Box<dyn Error>> {
     let public_key = match key_type {
-        SignatureSchemeMultiPublicKeyType::Ed25519K256Der => {
+        KeyType::Ed25519DerEncoded => {
             let public_key_bytes =
                 <ed25519::pkcs8::PublicKeyBytes as pkcs8::DecodePublicKey>::from_public_key_der(
                     &public_key_der,
@@ -30,7 +30,7 @@ pub fn convert_public_key_der_to_iota_public_key(
             )
             .unwrap()
         }
-        SignatureSchemeMultiPublicKeyType::P256Der => {
+        KeyType::P256DerEncoded => {
             let decoded = p256::PublicKey::from_public_key_der(&public_key_der).unwrap();
             let sec1_bytes = decoded.to_sec1_bytes();
             let pk = SignatureSchemeIotaPublicKey::try_from_bytes(
@@ -41,7 +41,7 @@ pub fn convert_public_key_der_to_iota_public_key(
 
             pk
         }
-        SignatureSchemeMultiPublicKeyType::K256Der => {
+        KeyType::K256DerEncoded => {
             let decoded = k256::PublicKey::from_public_key_der(&public_key_der).unwrap();
             let sec1_bytes = decoded.to_sec1_bytes();
             let pk = SignatureSchemeIotaPublicKey::try_from_bytes(

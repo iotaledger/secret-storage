@@ -5,8 +5,8 @@ use async_trait::async_trait;
 use iota_interaction::IotaKeySignature;
 use iota_interaction::OptionalSync;
 use multi_schema::KeyIdDefinition;
+use multi_schema::KeyType;
 use multi_schema::SignatureSchemeMulti;
-use multi_schema::SignatureSchemeMultiSignatureType;
 use secret_storage::KeyDelete;
 use secret_storage::KeyExist;
 use secret_storage::KeyGenerate;
@@ -40,7 +40,7 @@ where
 
         let public_key_iota = convert_public_key_der_to_iota_public_key(
             &public_key_multi.bytes,
-            &public_key_multi.public_key_type,
+            &public_key_multi.key_type,
         )
         .unwrap();
 
@@ -48,23 +48,21 @@ where
     }
 }
 
-impl<TInner> KeySignWithAlgorithm<IotaKeySignature, String, SignatureSchemeMultiSignatureType>
+impl<TInner> KeySignWithAlgorithm<IotaKeySignature, String, KeyType>
     for IotaCompatibleKeyStorage<TInner>
 where
-    TInner: KeySignWithAlgorithm<SignatureSchemeMulti, TInner::KeyId, SignatureSchemeMultiSignatureType>
+    TInner: KeySignWithAlgorithm<SignatureSchemeMulti, TInner::KeyId, KeyType>
         + KeyIdDefinition
         + OptionalSync,
-    <TInner as KeySignWithAlgorithm<
-        SignatureSchemeMulti,
-        TInner::KeyId,
-        SignatureSchemeMultiSignatureType,
-    >>::Signer: Signer<SignatureSchemeMulti, KeyId = TInner::KeyId> + OptionalSync,
+    <TInner as KeySignWithAlgorithm<SignatureSchemeMulti, TInner::KeyId, KeyType>>::Signer:
+        Signer<SignatureSchemeMulti, KeyId = TInner::KeyId> + OptionalSync,
 {
     type Signer = IotaCompatibleSigner<TInner::Signer>;
+
     fn get_signer_with_algorithm(
         &self,
         key_id: &String,
-        algorithm: &SignatureSchemeMultiSignatureType,
+        algorithm: &KeyType,
     ) -> Result<Self::Signer> {
         let multi_signer = self
             .inner
@@ -95,7 +93,7 @@ where
 
         let public_key_iota = convert_public_key_der_to_iota_public_key(
             &public_key_multi.bytes,
-            &public_key_multi.public_key_type.try_into().unwrap(),
+            &public_key_multi.key_type.try_into().unwrap(),
         )
         .unwrap();
 

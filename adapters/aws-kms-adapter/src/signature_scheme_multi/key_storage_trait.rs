@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use aws_sdk_kms::types::KeyState;
 use multi_schema::SignatureSchemeMulti;
 use multi_schema::SignatureSchemeMultiPublicKey;
-use multi_schema::SignatureSchemeMultiSignatureType;
+use multi_schema::KeyType;
 use secret_storage::KeyDelete;
 use secret_storage::KeyExist;
 use secret_storage::KeyGenerate;
@@ -25,11 +25,11 @@ const KEY_DELETION_PENDING_WINDOW_IN_DAYS: i32 = 7;
 #[cfg_attr(not(feature = "send-sync-storage"), async_trait(?Send))]
 #[cfg_attr(feature = "send-sync-storage", async_trait)]
 impl KeyGenerate<SignatureSchemeMulti, String> for AwsKmsStorage {
-  type Options = SignatureSchemeMultiSignatureType;
+  type Options = KeyType;
 
   async fn generate_key_with_options(
     &self,
-    options: SignatureSchemeMultiSignatureType,
+    options: KeyType,
   ) -> Result<(
     String,
     <SignatureSchemeMulti as SecretStorageSignatureScheme>::PublicKey,
@@ -40,7 +40,7 @@ impl KeyGenerate<SignatureSchemeMulti, String> for AwsKmsStorage {
 
     let public_key_multi = SignatureSchemeMultiPublicKey {
       bytes: public_key_der,
-      public_key_type: key_spec.try_into().unwrap(),
+      key_type: key_spec.try_into().unwrap(),
     };
 
     // Return the original alias as the key identifier (without 'alias/' prefix for user display)
@@ -60,7 +60,7 @@ impl KeyGet<SignatureSchemeMulti, String> for AwsKmsStorage {
 
     Ok(SignatureSchemeMultiPublicKey {
       bytes: public_key_der,
-      public_key_type: key_spec_adapter.try_into().unwrap(),
+      key_type: key_spec_adapter.try_into().unwrap(),
     })
   }
 }
@@ -107,12 +107,12 @@ impl KeyExist<String> for AwsKmsStorage {
 
 #[cfg_attr(not(feature = "send-sync-storage"), async_trait(?Send))]
 #[cfg_attr(feature = "send-sync-storage", async_trait)]
-impl KeySignWithAlgorithm<SignatureSchemeMulti, String, SignatureSchemeMultiSignatureType> for AwsKmsStorage {
+impl KeySignWithAlgorithm<SignatureSchemeMulti, String, KeyType> for AwsKmsStorage {
   type Signer = AwsKmsSigner;
   fn get_signer_with_algorithm(
     &self,
     key_id: &String,
-    signature_type: &SignatureSchemeMultiSignatureType,
+    signature_type: &KeyType,
   ) -> Result<Self::Signer> {
     let signer: AwsKmsSigner =
       AwsKmsStorage::get_signer_with_key_spec(self, key_id, signature_type.clone().try_into().unwrap())?;

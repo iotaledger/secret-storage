@@ -59,11 +59,9 @@ where
     async fn public_key(&self) -> secret_storage::Result<SignatureSchemeIotaPublicKey> {
         let public_key = self.inner.public_key().await.unwrap();
 
-        let public_key_iota = convert_public_key_der_to_iota_public_key(
-            &public_key.bytes,
-            &public_key.public_key_type,
-        )
-        .unwrap();
+        let public_key_iota =
+            convert_public_key_der_to_iota_public_key(&public_key.bytes, &public_key.key_type)
+                .unwrap();
 
         Ok(public_key_iota)
     }
@@ -77,6 +75,7 @@ pub fn to_iota_signature(
     signature: &[u8],
     public_key_iota: &SignatureSchemeIotaPublicKey,
 ) -> Result<Vec<u8>, Box<dyn Error>> {
+    // return Ok(signature.to_vec());
     let (r_bytes, s_bytes) = match public_key_iota.scheme() {
         Secp256r1IotaSignature::SCHEME => {
             // let signature = p256::ecdsa::Signature::from_der(signature).unwrap(); // der encoding already undone

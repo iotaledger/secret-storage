@@ -5,7 +5,7 @@ mod signer_trait;
 mod storage;
 mod utils;
 
-pub use multi_schema::SignatureSchemeMultiSignatureType;
+pub use multi_schema::KeyType;
 pub use signer::*;
 pub use signer_trait::*;
 pub use storage::*;

@@ -53,7 +53,7 @@ impl Signer<SignatureSchemeMulti> for AwsKmsSigner {
 
     Ok(SignatureSchemeMultiSignature {
       bytes: signature,
-      signature_type: self.key_spec.try_into().unwrap(),
+      key_type: self.key_spec.try_into().unwrap(),
     })
   }
 
@@ -63,7 +63,7 @@ impl Signer<SignatureSchemeMulti> for AwsKmsSigner {
 
     Ok(SignatureSchemeMultiPublicKey {
       bytes: public_key_der,
-      public_key_type: key_spec_adapter.try_into().unwrap(),
+      key_type: key_spec_adapter.try_into().unwrap(),
     })
   }
 
