@@ -18,7 +18,7 @@ use multi_schema::SignatureSchemeMulti;
 use secret_storage::KeyDelete;
 use secret_storage::KeyExist;
 use secret_storage::KeyGenerate;
-use secret_storage::KeySignWithAlgorithm;
+use secret_storage::KeySignWithOptions;
 use secret_storage::Signer;
 
 use crate::storage::IotaCompatibleKeyStorage;
@@ -28,29 +28,31 @@ use crate::utils::convert_public_key_der_to_iota_public_key;
 #[cfg_attr(feature = "send-sync-storage", async_trait)]
 impl<TInner> JwkStorage for IotaCompatibleKeyStorage<TInner>
 where
-    TInner: KeyGenerate<SignatureSchemeMulti, String, Options = MultiSchemaKeyType>
-        + KeySignWithAlgorithm<SignatureSchemeMulti, String, MultiSchemaKeyType>
+    TInner: KeyGenerate<SignatureSchemeMulti, String, Options: TryFrom<MultiSchemaKeyType>>
+        + KeySignWithOptions<SignatureSchemeMulti, String, Options: TryFrom<MultiSchemaKeyType>>
         + KeyDelete<String>
         + KeyExist<String>
         + OptionalSync
         + OptionalSend,
-    <TInner as KeySignWithAlgorithm<SignatureSchemeMulti, String, MultiSchemaKeyType>>::Signer:
-        OptionalSend,
+    <TInner as KeySignWithOptions<SignatureSchemeMulti, String>>::Signer: OptionalSend,
 {
     async fn generate(
         &self,
         key_type: IdentityStorageKeyType,
         alg: JwsAlgorithm,
     ) -> KeyStorageResult<JwkGenOutput> {
-        let signature_type_from_key_type =
-            MultiSchemaKeyType::from_str(&key_type.to_string()).unwrap();
-        let signature_type_from_alg: MultiSchemaKeyType = alg_to_signature_type(&alg)?;
-        if signature_type_from_key_type != signature_type_from_alg {
+        let key_type = MultiSchemaKeyType::from_str(&key_type.to_string()).unwrap();
+        let signature_type_from_alg: MultiSchemaKeyType = alg_to_key_type(&alg)?;
+        if key_type != signature_type_from_alg {
             panic!("key type and algorithm mismatch");
         }
         let (kms_key_id, public_key) = self
             .inner
-            .generate_key_with_options(signature_type_from_alg)
+            .generate_key_with_options(
+                signature_type_from_alg
+                    .try_into()
+                    .map_err(|_| KeyStorageError::new(KeyStorageErrorKind::UnsupportedKeyType))?,
+            )
             .await
             .unwrap();
 
@@ -87,11 +89,16 @@ where
                     .map_err(|_| KeyStorageErrorKind::UnsupportedSignatureAlgorithm)
             })?;
 
-        let signature_type: MultiSchemaKeyType = alg_to_signature_type(&alg)?;
+        let key_type: MultiSchemaKeyType = alg_to_key_type(&alg)?;
 
         let inner_signer = self
             .inner
-            .get_signer_with_algorithm(&key_id.to_string(), &signature_type)
+            .get_signer_with_options(
+                &key_id.to_string(),
+                &key_type
+                    .try_into()
+                    .map_err(|_| KeyStorageError::new(KeyStorageErrorKind::UnsupportedKeyType))?,
+            )
             .unwrap();
 
         let signature = inner_signer.sign(&data.to_vec()).await.unwrap();
@@ -108,8 +115,8 @@ where
     }
 }
 
-fn alg_to_signature_type(alg: &JwsAlgorithm) -> KeyStorageResult<MultiSchemaKeyType> {
-    let signature_type = match alg {
+fn alg_to_key_type(alg: &JwsAlgorithm) -> KeyStorageResult<MultiSchemaKeyType> {
+    let key_type = match alg {
         JwsAlgorithm::ES256 => MultiSchemaKeyType::P256DerEncoded,
         JwsAlgorithm::ES256K => MultiSchemaKeyType::K256DerEncoded,
         JwsAlgorithm::EdDSA => MultiSchemaKeyType::Ed25519DerEncoded,
@@ -121,5 +128,5 @@ fn alg_to_signature_type(alg: &JwsAlgorithm) -> KeyStorageResult<MultiSchemaKeyT
         }
     };
 
-    Ok(signature_type)
+    Ok(key_type)
 }

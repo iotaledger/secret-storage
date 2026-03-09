@@ -5,13 +5,12 @@ use async_trait::async_trait;
 use iota_interaction::IotaKeySignature;
 use iota_interaction::OptionalSync;
 use multi_schema::KeyIdDefinition;
-use multi_schema::KeyType;
 use multi_schema::SignatureSchemeMulti;
 use secret_storage::KeyDelete;
 use secret_storage::KeyExist;
 use secret_storage::KeyGenerate;
 use secret_storage::KeyGet;
-use secret_storage::KeySignWithAlgorithm;
+use secret_storage::KeySignWithOptions;
 use secret_storage::Result;
 use secret_storage::SignatureScheme as SecretStorageSignatureScheme;
 use secret_storage::Signer;
@@ -48,25 +47,29 @@ where
     }
 }
 
-impl<TInner> KeySignWithAlgorithm<IotaKeySignature, String, KeyType>
-    for IotaCompatibleKeyStorage<TInner>
+impl<TInner> KeySignWithOptions<IotaKeySignature, String> for IotaCompatibleKeyStorage<TInner>
 where
-    TInner: KeySignWithAlgorithm<SignatureSchemeMulti, TInner::KeyId, KeyType>
-        + KeyIdDefinition
-        + OptionalSync,
-    <TInner as KeySignWithAlgorithm<SignatureSchemeMulti, TInner::KeyId, KeyType>>::Signer:
+    TInner:
+        KeySignWithOptions<SignatureSchemeMulti, TInner::KeyId> + KeyIdDefinition + OptionalSync,
+    <TInner as KeySignWithOptions<SignatureSchemeMulti, TInner::KeyId>>::Signer:
         Signer<SignatureSchemeMulti, KeyId = TInner::KeyId> + OptionalSync,
 {
     type Signer = IotaCompatibleSigner<TInner::Signer>;
+    type Options = TInner::Options;
 
-    fn get_signer_with_algorithm(
+    fn get_signer_with_options(
         &self,
         key_id: &String,
-        algorithm: &KeyType,
+        options: &TInner::Options,
     ) -> Result<Self::Signer> {
         let multi_signer = self
             .inner
-            .get_signer_with_algorithm(&to_inner_key_id::<TInner>(key_id)?, algorithm)
+            .get_signer_with_options(
+                &to_inner_key_id::<TInner>(key_id)?,
+                options.try_into().map_err(|_| {
+                    secret_storage::Error::InvalidConfig("Failed to convert.".to_string())
+                })?,
+            )
             .unwrap();
         let iota_signer = IotaCompatibleSigner {
             inner: multi_signer,

@@ -4,14 +4,14 @@
 use async_trait::async_trait;
 
 use aws_sdk_kms::types::KeyState;
+use multi_schema::KeyType;
 use multi_schema::SignatureSchemeMulti;
 use multi_schema::SignatureSchemeMultiPublicKey;
-use multi_schema::KeyType;
 use secret_storage::KeyDelete;
 use secret_storage::KeyExist;
 use secret_storage::KeyGenerate;
 use secret_storage::KeyGet;
-use secret_storage::KeySignWithAlgorithm;
+use secret_storage::KeySignWithOptions;
 use secret_storage::Result;
 use secret_storage::SignatureScheme as SecretStorageSignatureScheme;
 
@@ -107,13 +107,10 @@ impl KeyExist<String> for AwsKmsStorage {
 
 #[cfg_attr(not(feature = "send-sync-storage"), async_trait(?Send))]
 #[cfg_attr(feature = "send-sync-storage", async_trait)]
-impl KeySignWithAlgorithm<SignatureSchemeMulti, String, KeyType> for AwsKmsStorage {
+impl KeySignWithOptions<SignatureSchemeMulti, String> for AwsKmsStorage {
   type Signer = AwsKmsSigner;
-  fn get_signer_with_algorithm(
-    &self,
-    key_id: &String,
-    signature_type: &KeyType,
-  ) -> Result<Self::Signer> {
+  type Options = KeyType;
+  fn get_signer_with_options(&self, key_id: &String, signature_type: &KeyType) -> Result<Self::Signer> {
     let signer: AwsKmsSigner =
       AwsKmsStorage::get_signer_with_key_spec(self, key_id, signature_type.clone().try_into().unwrap())?;
     Ok(signer)
