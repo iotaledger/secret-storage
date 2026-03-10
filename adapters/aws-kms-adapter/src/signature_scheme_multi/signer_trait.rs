@@ -34,9 +34,11 @@ impl Signer<SignatureSchemeMulti> for AwsKmsSigner {
       .await
       .map_err(|e| {
         secret_storage::Error::Other(anyhow::anyhow!(
-          "AWS KMS signing failed for key {}: {}",
+          "AWS KMS signing failed for key {}{}",
           key_id,
-          e.as_service_error().unwrap().meta()
+          e.as_service_error()
+            .map(|se| format!(": {}", &se.meta()))
+            .unwrap_or_default()
         ))
       })?;
 
@@ -46,24 +48,38 @@ impl Signer<SignatureSchemeMulti> for AwsKmsSigner {
       .into_inner();
 
     let signature = match self.key_spec {
-      KeySpec::EccNistP256 => P256Signature::from_der(&signature).unwrap().to_vec(),
-      KeySpec::EccSecgP256K1 => K256Signature::from_der(&signature).unwrap().to_vec(),
+      KeySpec::EccNistP256 => P256Signature::from_der(&signature)
+        .map_err(|e| {
+          secret_storage::Error::Other(anyhow::anyhow!(
+            "Failed to parse P256Signature from AWS KMS response; {}",
+            e,
+          ))
+        })?
+        .to_vec(),
+      KeySpec::EccSecgP256K1 => K256Signature::from_der(&signature)
+        .map_err(|e| {
+          secret_storage::Error::Other(anyhow::anyhow!(
+            "Failed to parse K256Signature from AWS KMS response; {}",
+            e,
+          ))
+        })?
+        .to_vec(),
       _ => signature,
     };
 
     Ok(SignatureSchemeMultiSignature {
       bytes: signature,
-      key_type: self.key_spec.try_into().unwrap(),
+      key_type: self.key_spec.try_into()?,
     })
   }
 
   async fn public_key(&self) -> secret_storage::Result<SignatureSchemeMultiPublicKey> {
     let (public_key_der, key_spec_aws) = get_public_key_der(&self.client, &self.key_id()).await?;
-    let key_spec_adapter: KeySpec = key_spec_aws.try_into().unwrap();
+    let key_spec_adapter: KeySpec = key_spec_aws.try_into()?;
 
     Ok(SignatureSchemeMultiPublicKey {
       bytes: public_key_der,
-      key_type: key_spec_adapter.try_into().unwrap(),
+      key_type: key_spec_adapter.try_into()?,
     })
   }
 

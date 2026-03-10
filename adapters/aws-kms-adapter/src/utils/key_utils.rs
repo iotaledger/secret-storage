@@ -11,18 +11,14 @@ use crate::AwsKmsError;
 
 pub(crate) async fn get_public_key_der(client: &KmsClient, key_id: &str) -> Result<(Vec<u8>, KeySpec)> {
   // AWS KMS get_public_key accepts both aliases and KMS key IDs
-  let public_key_response = client
-    .get_public_key()
-    .key_id(key_id)
-    .send()
-    .await
-    .map_err(|e| {
-      AwsKmsError::General(format!(
-        "Failed to get public key from KMS: {}",
-        e.into_source().unwrap()
-      ))
-    })
-    .unwrap();
+  let public_key_response = client.get_public_key().key_id(key_id).send().await.map_err(|e| {
+    AwsKmsError::General(format!(
+      "Failed to get public key from KMS: {}",
+      e.into_source()
+        .map(|source| format!(": {source}"))
+        .unwrap_or_else(|_| String::default())
+    ))
+  })?;
 
   let public_key_der = public_key_response
     .public_key

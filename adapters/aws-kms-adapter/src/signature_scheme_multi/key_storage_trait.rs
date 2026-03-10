@@ -20,8 +20,6 @@ use crate::AwsKmsSigner;
 use crate::AwsKmsStorage;
 use crate::KeySpec;
 
-const KEY_DELETION_PENDING_WINDOW_IN_DAYS: i32 = 7;
-
 #[cfg_attr(not(feature = "send-sync-storage"), async_trait(?Send))]
 #[cfg_attr(feature = "send-sync-storage", async_trait)]
 impl KeyGenerate<SignatureSchemeMulti, String> for AwsKmsStorage {
@@ -34,13 +32,13 @@ impl KeyGenerate<SignatureSchemeMulti, String> for AwsKmsStorage {
     String,
     <SignatureSchemeMulti as SecretStorageSignatureScheme>::PublicKey,
   )> {
-    let key_spec: KeySpec = options.try_into().unwrap();
+    let key_spec: KeySpec = options.try_into()?;
 
-    let (kms_key_id, public_key_der) = self.generate_key(key_spec).await.unwrap();
+    let (kms_key_id, public_key_der) = self.generate_key(key_spec).await?;
 
     let public_key_multi = SignatureSchemeMultiPublicKey {
       bytes: public_key_der,
-      key_type: key_spec.try_into().unwrap(),
+      key_type: key_spec.try_into()?,
     };
 
     // Return the original alias as the key identifier (without 'alias/' prefix for user display)
@@ -56,11 +54,11 @@ impl KeyGet<SignatureSchemeMulti, String> for AwsKmsStorage {
     key_id: &String,
   ) -> Result<<SignatureSchemeMulti as SecretStorageSignatureScheme>::PublicKey> {
     let (public_key_der, key_spec_aws) = get_public_key_der(&self.client, key_id).await?;
-    let key_spec_adapter: KeySpec = key_spec_aws.try_into().unwrap();
+    let key_spec_adapter: KeySpec = key_spec_aws.try_into()?;
 
     Ok(SignatureSchemeMultiPublicKey {
       bytes: public_key_der,
-      key_type: key_spec_adapter.try_into().unwrap(),
+      key_type: key_spec_adapter.try_into()?,
     })
   }
 }
@@ -69,16 +67,7 @@ impl KeyGet<SignatureSchemeMulti, String> for AwsKmsStorage {
 #[cfg_attr(feature = "send-sync-storage", async_trait)]
 impl KeyDelete<String> for AwsKmsStorage {
   async fn delete(&self, key_id: &String) -> Result<()> {
-    self
-      .client
-      .schedule_key_deletion()
-      .key_id(key_id)
-      .pending_window_in_days(KEY_DELETION_PENDING_WINDOW_IN_DAYS)
-      .send()
-      .await
-      .unwrap();
-
-    Ok(())
+    self.delete_key(key_id, None).await
   }
 }
 
@@ -112,7 +101,7 @@ impl KeySignWithOptions<SignatureSchemeMulti, String> for AwsKmsStorage {
   type Options = KeyType;
   fn get_signer_with_options(&self, key_id: &String, signature_type: &KeyType) -> Result<Self::Signer> {
     let signer: AwsKmsSigner =
-      AwsKmsStorage::get_signer_with_key_spec(self, key_id, signature_type.clone().try_into().unwrap())?;
+      AwsKmsStorage::get_signer_with_key_spec(self, key_id, signature_type.clone().try_into()?)?;
     Ok(signer)
   }
 }

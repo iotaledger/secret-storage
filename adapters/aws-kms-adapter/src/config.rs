@@ -3,7 +3,6 @@
 
 use aws_sdk_kms::types::KeySpec as AwsKeySpec;
 use aws_sdk_kms::types::SigningAlgorithmSpec as AwsSigningAlgorithmSpec;
-use identity_iota::storage::KeyType as IdentityStorageKeyType;
 use multi_schema::KeyType;
 use serde::Deserialize;
 use serde::Serialize;
@@ -153,14 +152,8 @@ impl TryInto<KeySpec> for AwsKeySpec {
   }
 }
 
-impl Into<IdentityStorageKeyType> for KeySpec {
-  fn into(self) -> IdentityStorageKeyType {
-    IdentityStorageKeyType::from_static_str(self.into())
-  }
-}
-
 impl TryFrom<KeySpec> for KeyType {
-  type Error = anyhow::Error;
+  type Error = AwsKmsError;
 
   fn try_from(value: KeySpec) -> Result<Self, Self::Error> {
     let key_type = match value {
@@ -174,7 +167,7 @@ impl TryFrom<KeySpec> for KeyType {
 }
 
 impl TryFrom<KeyType> for KeySpec {
-  type Error = anyhow::Error;
+  type Error = AwsKmsError;
 
   fn try_from(value: KeyType) -> Result<Self, Self::Error> {
     let key_spec = match value {
@@ -182,7 +175,7 @@ impl TryFrom<KeyType> for KeySpec {
       KeyType::K256DerEncoded => Self::EccSecgP256K1,
       KeyType::Ed25519DerEncoded => Self::EccNistEdwards25519,
       other => {
-        anyhow::bail!("unsupported key type '{other}'")
+        return Err(AwsKmsError::UnsupportedKeyType(other.to_string()));
       }
     };
 

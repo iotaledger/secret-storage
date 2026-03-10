@@ -11,6 +11,8 @@ use crate::AwsKmsError;
 use crate::AwsKmsSigner;
 use crate::KeySpec as AdapterKeySpec;
 
+const KEY_DELETION_PENDING_WINDOW_IN_DAYS: i32 = 7;
+
 /// generic default values in adapter creation
 /// Options for key generation in AWS KMS
 #[derive(Clone, Debug, Default)]
@@ -44,7 +46,6 @@ impl AwsKmsStorage {
 }
 // helper functions for building signature trait implementations
 impl AwsKmsStorage {
-  // pub(crate) async fn generate_key(&self, options: AwsKmsKeyOptions) -> Result<(String, Vec<u8>)> {
   pub(crate) async fn generate_key(&self, key_spec: AdapterKeySpec) -> Result<(String, Vec<u8>)> {
     // If no alias is provided, generate a unique one
     let key_alias = self
@@ -60,7 +61,7 @@ impl AwsKmsStorage {
       .client
       .create_key()
       .key_usage(aws_sdk_kms::types::KeyUsageType::SignVerify)
-      .key_spec(key_spec.try_into().unwrap());
+      .key_spec(key_spec.try_into()?);
 
     if let Some(description) = &self.config.key_options.description {
       create_key = create_key.description(description);
@@ -74,7 +75,7 @@ impl AwsKmsStorage {
 
     // Add tags if provided
     if !self.config.key_options.tags.is_empty() {
-      let tags: Vec<_> = self
+      let tags = self
         .config
         .key_options
         .tags
@@ -84,9 +85,9 @@ impl AwsKmsStorage {
             .tag_key(k)
             .tag_value(v)
             .build()
-            .unwrap()
+            .map_err(|err| AwsKmsError::Configuration(format!("Failed to construct tags from config; {err}.")))
         })
-        .collect();
+        .collect::<Result<Vec<_>, _>>()?;
       create_key = create_key.set_tags(Some(tags));
     }
 
@@ -127,69 +128,21 @@ impl AwsKmsStorage {
       .ok_or_else(|| AwsKmsError::General("No public key returned from KMS".to_string()))?
       .into_inner();
 
-    // Return the original alias as the key identifier (without 'alias/' prefix for user display)
-    // Ok((key_alias, public_key_der))
     Ok((kms_key_id, public_key_der))
   }
 
-  // to be removed
-  // shared behavior between signer and storage, so keeping it in helper function
-  // pub(crate) async fn get_public_key_der(&self, key_id: &str) -> Result<(Vec<u8>, KeySpec)> {
-  //     // AWS KMS get_public_key accepts both aliases and KMS key IDs
-  //     let public_key_response = self
-  //         .client
-  //         .get_public_key()
-  //         .key_id(key_id)
-  //         .send()
-  //         .await
-  //         .map_err(|e| {
-  //             AwsKmsError::General(format!(
-  //                 "Failed to get public key from KMS: {}",
-  //                 e.into_source().unwrap()
-  //             ))
-  //         })
-  //         .unwrap();
+  pub(crate) async fn delete_key(&self, key_id: &str, pending_window_in_days: Option<i32>) -> Result<()> {
+    self
+      .client
+      .schedule_key_deletion()
+      .key_id(key_id)
+      .pending_window_in_days(pending_window_in_days.unwrap_or(KEY_DELETION_PENDING_WINDOW_IN_DAYS))
+      .send()
+      .await
+      .map_err(|e| AwsKmsError::General(format!("Failed to schedule key deletion: {}", e)))?;
 
-  //     // Get the actual KMS key ID for logging and validation
-  //     let actual_key_id = public_key_response.key_id.as_deref().unwrap_or("unknown");
-
-  //     // Verify it's the expected key type
-  //     if let Some(key_usage) = public_key_response.key_usage {
-  //         if key_usage != aws_sdk_kms::types::KeyUsageType::SignVerify {
-  //             return Err(AwsKmsError::General(format!(
-  //                 "Key {} (actual ID: {}) is not for signing, got usage: {:?}",
-  //                 key_id, actual_key_id, key_usage
-  //             ))
-  //             .into());
-  //         }
-  //     }
-
-  //     let key_spec = public_key_response.key_spec().ok_or_else(|| {
-  //         Err(
-  //             AwsKmsError::General(format!("Key {} is missing KeySpec information", key_id))
-  //                 .into(),
-  //         )
-  //     })?;
-
-  //     let public_key_der = public_key_response
-  //         .public_key
-  //         .ok_or_else(|| AwsKmsError::General("No public key returned from KMS".to_string()))?
-  //         .into_inner();
-
-  //     Ok((public_key_der, key_spec.clone()))
-  // }
-
-  //   async fn delete(&self, key_id: &str, pending_window_in_days: Option<i32>) -> Result<()> {
-  //     self
-  //       .client
-  //       .schedule_key_deletion()
-  //       .key_id(key_id)
-  //       .pending_window_in_days(pending_window_in_days.unwrap_or(DEFAULT_PENDING_WINDOW_IN_DAYS))
-  //       .send()
-  //       .await
-  //       .unwrap();
-  //     Ok(())
-  //   }
+    Ok(())
+  }
 
   pub(crate) fn get_signer_with_key_spec(&self, key_id: &String, key_spec: AdapterKeySpec) -> Result<AwsKmsSigner> {
     Ok(AwsKmsSigner::new(self.client.clone(), key_id.clone(), key_spec))
