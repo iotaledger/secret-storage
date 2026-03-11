@@ -38,8 +38,8 @@ where
             self.inner.generate_key_with_options(options).await.unwrap();
 
         let public_key_iota = convert_public_key_der_to_iota_public_key(
-            &public_key_multi.bytes,
-            &public_key_multi.key_type,
+            &public_key_multi.bytes(),
+            &public_key_multi.key_type(),
         )
         .unwrap();
 
@@ -95,8 +95,8 @@ where
             .unwrap();
 
         let public_key_iota = convert_public_key_der_to_iota_public_key(
-            &public_key_multi.bytes,
-            &public_key_multi.key_type.try_into().unwrap(),
+            &public_key_multi.bytes(),
+            &public_key_multi.key_type().clone().try_into().unwrap(),
         )
         .unwrap();
 

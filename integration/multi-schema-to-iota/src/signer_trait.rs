@@ -49,7 +49,7 @@ where
 
         // build IOTA signature with public key
         let public_key_iota = Signer::<SignatureSchemeIota>::public_key(self).await?;
-        let iota_signature_bytes = to_iota_signature(&signature.bytes, &public_key_iota).unwrap();
+        let iota_signature_bytes = to_iota_signature(&signature.bytes(), &public_key_iota).unwrap();
         let iota_signature =
             SignatureSchemeIotaSignature::from_bytes(&iota_signature_bytes).unwrap();
 
@@ -60,7 +60,7 @@ where
         let public_key = self.inner.public_key().await.unwrap();
 
         let public_key_iota =
-            convert_public_key_der_to_iota_public_key(&public_key.bytes, &public_key.key_type)
+            convert_public_key_der_to_iota_public_key(&public_key.bytes(), &public_key.key_type())
                 .unwrap();
 
         Ok(public_key_iota)

@@ -10,7 +10,6 @@ use secret_storage::Result;
 use crate::AwsKmsError;
 
 pub(crate) async fn get_public_key_der(client: &KmsClient, key_id: &str) -> Result<(Vec<u8>, KeySpec)> {
-  // AWS KMS get_public_key accepts both aliases and KMS key IDs
   let public_key_response = client.get_public_key().key_id(key_id).send().await.map_err(|e| {
     AwsKmsError::General(format!(
       "Failed to get public key from KMS: {}",

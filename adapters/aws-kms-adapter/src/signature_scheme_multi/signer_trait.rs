@@ -67,20 +67,17 @@ impl Signer<SignatureSchemeMulti> for AwsKmsSigner {
       _ => signature,
     };
 
-    Ok(SignatureSchemeMultiSignature {
-      bytes: signature,
-      key_type: self.key_spec.try_into()?,
-    })
+    Ok(SignatureSchemeMultiSignature::new(signature, self.key_spec.try_into()?))
   }
 
   async fn public_key(&self) -> secret_storage::Result<SignatureSchemeMultiPublicKey> {
     let (public_key_der, key_spec_aws) = get_public_key_der(&self.client, &self.key_id()).await?;
     let key_spec_adapter: KeySpec = key_spec_aws.try_into()?;
 
-    Ok(SignatureSchemeMultiPublicKey {
-      bytes: public_key_der,
-      key_type: key_spec_adapter.try_into()?,
-    })
+    Ok(SignatureSchemeMultiPublicKey::new(
+      public_key_der,
+      key_spec_adapter.try_into()?,
+    ))
   }
 
   fn key_id(&self) -> Self::KeyId {

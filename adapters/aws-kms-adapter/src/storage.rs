@@ -3,7 +3,6 @@
 
 use aws_sdk_kms::Client as KmsClient;
 use secret_storage::Result;
-use uuid::Uuid;
 
 use crate::create_kms_client_from_config;
 use crate::AwsKmsConfig;
@@ -21,8 +20,6 @@ pub struct AwsKmsKeyOptions {
   pub policy: Option<String>,
   /// Optional key description
   pub description: Option<String>,
-  /// Alias
-  pub alias: Option<String>,
   /// Optional tags
   pub tags: Vec<(String, String)>,
   /// Optional KeySpec to use
@@ -36,27 +33,53 @@ pub struct AwsKmsStorage {
   pub(crate) config: AwsKmsConfig,
 }
 
-/// public behavior
 impl AwsKmsStorage {
   /// Create new AWS KMS storage
-  pub async fn new(config: AwsKmsConfig) -> Result<Self> {
+  pub async fn from_config(config: AwsKmsConfig) -> Result<Self> {
     let client = create_kms_client_from_config(&config).await?;
     Ok(Self { client, config })
   }
+
+  // assign key options to allow env/profile initialization with custom key properties
+  pub fn with_key_options(self, key_options: AwsKmsKeyOptions) -> Self {
+    Self {
+      config: self.config.with_key_options(key_options),
+      ..self
+    }
+  }
 }
+
+#[cfg(feature = "profile")]
+mod from_profile {
+  use crate::create_kms_client_with_profile;
+
+  use super::*;
+
+  impl AwsKmsStorage {
+    /// Create AWS KMS storage with profile support
+    pub async fn from_profile(profile_name: Option<&str>) -> Result<Self> {
+      let (client, config) = create_kms_client_with_profile(profile_name).await?;
+      Ok(Self { client, config })
+    }
+  }
+}
+
+#[cfg(feature = "env")]
+mod from_env {
+  use super::*;
+
+  impl AwsKmsStorage {
+    /// Create AWS KMS storage from environment variables
+    pub async fn from_env() -> Result<Self> {
+      let config = AwsKmsConfig::from_env()?;
+      Self::from_config(config).await
+    }
+  }
+}
+
 // helper functions for building signature trait implementations
 impl AwsKmsStorage {
   pub(crate) async fn generate_key(&self, key_spec: AdapterKeySpec) -> Result<(String, Vec<u8>)> {
-    // If no alias is provided, generate a unique one
-    let key_alias = self
-      .config
-      .key_options
-      .alias
-      .clone()
-      .unwrap_or_else(|| format!("{}", Uuid::new_v4()));
-
-    self.client.create_alias().set_alias_name(Some(key_alias.clone()));
-
     let mut create_key = self
       .client
       .create_key()
@@ -66,7 +89,7 @@ impl AwsKmsStorage {
     if let Some(description) = &self.config.key_options.description {
       create_key = create_key.description(description);
     } else {
-      create_key = create_key.description(format!("IOTA Secret Storage Key ({key_spec}) - {key_alias}",));
+      create_key = create_key.description(format!("IOTA Secret Storage Key ({key_spec})"));
     }
 
     if let Some(policy) = &self.config.key_options.policy {
@@ -102,23 +125,11 @@ impl AwsKmsStorage {
       .map(|metadata| metadata.key_id)
       .ok_or_else(|| AwsKmsError::General("No key ID returned from KMS".to_string()))?;
 
-    // Create the alias for the key (AWS requires 'alias/' prefix)
-    let aws_alias_name = format!("alias/{}", key_alias);
-
-    self
-      .client
-      .create_alias()
-      .alias_name(&aws_alias_name)
-      .target_key_id(&kms_key_id)
-      .send()
-      .await
-      .map_err(|e| AwsKmsError::General(format!("Failed to create alias: {}", e)))?;
-
-    // Get the public key immediately after creation using the alias
+    // Get the public key immediately after creation
     let public_key_response = self
       .client
       .get_public_key()
-      .key_id(&aws_alias_name)
+      .key_id(&kms_key_id)
       .send()
       .await
       .map_err(|e| AwsKmsError::General(format!("Failed to get public key: {}", e)))?;

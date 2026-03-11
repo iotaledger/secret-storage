@@ -6,7 +6,6 @@ use aws_sdk_kms::types::SigningAlgorithmSpec as AwsSigningAlgorithmSpec;
 use multi_schema::KeyType;
 use serde::Deserialize;
 use serde::Serialize;
-use std::env;
 use std::str::FromStr;
 
 use crate::error::AwsKmsError;
@@ -21,8 +20,8 @@ pub enum RegionIdentifier {
 /// Configuration for AWS KMS adapter
 #[derive(Debug, Clone)]
 pub struct AwsKmsConfig {
-  /// AWS region identifier (region name or profile in local config)
-  pub region: Option<RegionIdentifier>,
+  /// AWS region identifier
+  pub region: String,
   /// Default options for key generation/import
   pub key_options: AwsKmsKeyOptions,
 }
@@ -37,40 +36,37 @@ pub enum KeyUsage {
 }
 
 impl AwsKmsConfig {
-  /// Create configuration from environment variables
-  pub fn new_from_env() -> Result<Self, AwsKmsError> {
-    let region = env::var("AWS_REGION")
-      .or_else(|_| env::var("AWS_DEFAULT_REGION"))
-      .map_err(|_| AwsKmsError::MissingEnvVar("AWS_REGION or AWS_DEFAULT_REGION".to_string()))?;
-
-    Ok(Self {
-      region: Some(RegionIdentifier::Region(region)),
-      key_options: AwsKmsKeyOptions::default(),
-    })
-  }
-
   /// Create new configuration with custom parameters
-  pub fn new() -> Self {
+  pub fn new(region: String) -> Self {
     Self {
-      region: None,
+      region,
       key_options: AwsKmsKeyOptions::default(),
     }
   }
 
-  /// Set region
-  pub fn with_region(mut self, region: String) -> Self {
-    self.region = Some(RegionIdentifier::Region(region));
-    self
+  pub fn with_key_options(self, key_options: AwsKmsKeyOptions) -> Self {
+    Self { key_options, ..self }
   }
+}
 
-  /// Set Profile
-  pub fn with_profile(mut self, profile: String) -> Self {
-    self.region = Some(RegionIdentifier::Profile(profile));
-    self
-  }
+#[cfg(feature = "env")]
+mod from_env {
+  use std::env;
 
-  pub fn with_key_options(mut self, options: AwsKmsKeyOptions) {
-    self.key_options = options;
+  use super::*;
+
+  impl AwsKmsConfig {
+    /// Create configuration from environment variables
+    pub fn from_env() -> Result<Self, AwsKmsError> {
+      let region = env::var("AWS_REGION")
+        .or_else(|_| env::var("AWS_DEFAULT_REGION"))
+        .map_err(|_| AwsKmsError::MissingEnvVar("AWS_REGION or AWS_DEFAULT_REGION".to_string()))?;
+
+      Ok(Self {
+        region,
+        key_options: AwsKmsKeyOptions::default(),
+      })
+    }
   }
 }
 

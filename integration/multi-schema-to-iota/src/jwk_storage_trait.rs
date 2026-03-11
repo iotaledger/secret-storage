@@ -57,7 +57,7 @@ where
             .unwrap();
 
         let public_key_iota =
-            convert_public_key_der_to_iota_public_key(&public_key.bytes, &public_key.key_type)
+            convert_public_key_der_to_iota_public_key(&public_key.bytes(), &public_key.key_type())
                 .unwrap();
 
         let mut jwk = ToJwk::to_jwk(&public_key_iota).unwrap();
@@ -103,7 +103,7 @@ where
 
         let signature = inner_signer.sign(&data.to_vec()).await.unwrap();
 
-        Ok(signature.bytes)
+        Ok(signature.bytes().clone())
     }
 
     async fn delete(&self, key_id: &KeyId) -> KeyStorageResult<()> {

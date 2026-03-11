@@ -36,12 +36,8 @@ impl KeyGenerate<SignatureSchemeMulti, String> for AwsKmsStorage {
 
     let (kms_key_id, public_key_der) = self.generate_key(key_spec).await?;
 
-    let public_key_multi = SignatureSchemeMultiPublicKey {
-      bytes: public_key_der,
-      key_type: key_spec.try_into()?,
-    };
+    let public_key_multi = SignatureSchemeMultiPublicKey::new(public_key_der, key_spec.try_into()?);
 
-    // Return the original alias as the key identifier (without 'alias/' prefix for user display)
     Ok((kms_key_id, public_key_multi))
   }
 }
@@ -56,10 +52,10 @@ impl KeyGet<SignatureSchemeMulti, String> for AwsKmsStorage {
     let (public_key_der, key_spec_aws) = get_public_key_der(&self.client, key_id).await?;
     let key_spec_adapter: KeySpec = key_spec_aws.try_into()?;
 
-    Ok(SignatureSchemeMultiPublicKey {
-      bytes: public_key_der,
-      key_type: key_spec_adapter.try_into()?,
-    })
+    Ok(SignatureSchemeMultiPublicKey::new(
+      public_key_der,
+      key_spec_adapter.try_into()?,
+    ))
   }
 }
 
