@@ -47,6 +47,10 @@ impl AwsKmsStorage {
       ..self
     }
   }
+
+  pub async fn from_client(client: KmsClient, config: AwsKmsConfig) -> Result<Self> {
+    Ok(Self { client, config })
+  }
 }
 
 #[cfg(feature = "profile")]

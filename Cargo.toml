@@ -10,6 +10,8 @@ members = [
     "integration/multi-schema-to-iota",
 ]
 
+exclude = ["adapters/aws-kms-adapter/bindings/wasm/aws-kms-adapter-wasm"]
+
 [workspace.dependencies]
 anyhow = "1"
 thiserror = "2"

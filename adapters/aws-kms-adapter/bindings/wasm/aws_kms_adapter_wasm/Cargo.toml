@@ -1,0 +1,54 @@
+[package]
+name = "aws_kms_adapter_wasm"
+version = "0.0.1"
+authors = ["IOTA Stiftung"]
+edition = "2021"
+homepage = "https://www.iota.org"
+keywords = ["crypto", "aws", "kms", "storage", "keys", "wasm"]
+license = "Apache-2.0"
+publish = false
+readme = "README.md"
+repository = "https://github.com/iotaledger/secret-storage"
+description = "Web Assembly bindings for the aws-kms-adapter crate."
+
+[workspace]
+resolver = "2"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+aws-config = { version = "1.1", default-features = false }
+aws-credential-types = { version = "1", default-features = false }
+aws-kms-adapter = { path = "../../../" }
+aws-sdk-kms = { version = "1.94", default-features = false }
+aws-smithy-async = { version = "1.2.14"}
+aws-smithy-runtime-api = { version = "1.11.6", features = ["http-1x"]}
+aws-smithy-types = { version = "1.4.6"}
+getrandom = { version = "0.2", features = ["js"] }
+http-1x = { package = "http", version = "1.3.1" }
+js-sys = { version = "0.3.61" }
+reqwest = { version = "0.12", default-features = false, features = ["json"] }
+secret-storage = { path = "../../../../../core/secret-storage" }
+wasm-bindgen = { version = "=0.2.102", features = ["serde-serialize"] }
+wasm-bindgen-futures = { version = "0.4", default-features = false }
+
+[dev-dependencies]
+wasm-bindgen-test = { version = "0.3.52"}
+
+[profile.release]
+opt-level = 's'
+lto = true
+
+[lints.clippy]
+# can be removed as soon as fix has been added to clippy
+# see https://github.com/rust-lang/rust-clippy/issues/12377
+empty_docs = "allow"
+large_enum_variant = "allow"
+
+[lints.rust]
+# required for current wasm_bindgen version
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(wasm_bindgen_unstable_test_coverage)'] }
+
+[features]
+default = []
