@@ -3,5 +3,4 @@
 
 mod error;
 mod utils;
-mod wasm_signer_signature_scheme_multi;
-mod wasm_storage_signature_scheme_multi;
+mod wasm;

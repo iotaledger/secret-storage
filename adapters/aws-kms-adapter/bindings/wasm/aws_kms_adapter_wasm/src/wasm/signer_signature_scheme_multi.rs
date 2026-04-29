@@ -8,8 +8,8 @@ use wasm_bindgen::prelude::*;
 
 use crate::error::wasm_error;
 use crate::error::Result;
-use crate::utils::WasmSignatureSchemeMultiPublicKey;
-use crate::utils::WasmSignatureSchemeMultiSignature;
+use crate::wasm::signature_scheme_multi::WasmSignatureSchemeMultiPublicKey;
+use crate::wasm::signature_scheme_multi::WasmSignatureSchemeMultiSignature;
 
 #[wasm_bindgen(js_name = AwsKmsSigner)]
 pub struct WasmSignerSignatureSchemeMulti(pub(crate) AwsKmsSigner);

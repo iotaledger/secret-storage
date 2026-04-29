@@ -15,9 +15,9 @@ use crate::utils::aws::StaticCredentials;
 use crate::utils::aws::WasmHttpClient;
 use crate::utils::aws::WasmSleep;
 use crate::utils::aws::WasmTimeSource;
-use crate::utils::WasmKeyType;
-use crate::utils::WasmSignatureSchemeMultiPublicKey;
-use crate::wasm_signer_signature_scheme_multi::WasmSignerSignatureSchemeMulti;
+use crate::wasm::signature_scheme_multi::WasmKeyType;
+use crate::wasm::signature_scheme_multi::WasmSignatureSchemeMultiPublicKey;
+use crate::wasm::signer_signature_scheme_multi::WasmSignerSignatureSchemeMulti;
 
 #[wasm_bindgen(js_name = AwsKmsStorage)]
 pub struct WasmAwsKmsStorage(AwsKmsStorage);
@@ -59,7 +59,6 @@ impl WasmAwsKmsStorage {
   }
 }
 
-// Implements `KeyGenerate<SignatureSchemeMulti, String>` forWASM storage
 #[wasm_bindgen]
 pub struct NewKeyData {
   pub(crate) key_id: String,
@@ -85,6 +84,7 @@ impl NewKeyData {
   }
 }
 
+// Implements `KeyGenerate<SignatureSchemeMulti, String>` forWASM storage
 #[wasm_bindgen(js_class = AwsKmsStorage)]
 impl WasmAwsKmsStorage {
   #[wasm_bindgen(js_name = "generateKeyWithOptions")]
