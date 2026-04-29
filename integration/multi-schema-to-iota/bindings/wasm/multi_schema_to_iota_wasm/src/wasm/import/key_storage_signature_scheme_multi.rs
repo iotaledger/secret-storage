@@ -15,7 +15,7 @@ use secret_storage::SignatureScheme as SecretStorageSignatureScheme;
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 
-use crate::utils::SignatureSchemeMultiPublicKey;
+use crate::utils::signature_scheme_multi::SignatureSchemeMultiPublicKey;
 use crate::wasm::import::signer_signature_scheme_multi::WasmSignerSignatureSchemeMulti;
 
 #[wasm_bindgen(typescript_custom_section)]

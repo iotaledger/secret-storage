@@ -13,12 +13,10 @@ use secret_storage::Signer;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::JsValue;
 
-use crate::{
-    error::Result,
-    utils::{
-        SignatureSchemeMultiInput, SignatureSchemeMultiPublicKey, SignatureSchemeMultiSignature,
-    },
-};
+use crate::error::Result;
+use crate::utils::signature_scheme_multi::SignatureSchemeMultiInput;
+use crate::utils::signature_scheme_multi::SignatureSchemeMultiPublicKey;
+use crate::utils::signature_scheme_multi::SignatureSchemeMultiSignature;
 
 #[wasm_bindgen(typescript_custom_section)]
 const I_TX_SIGNER: &str = r#"
