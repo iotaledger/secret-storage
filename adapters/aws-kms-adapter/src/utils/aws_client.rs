@@ -6,8 +6,10 @@
 use aws_sdk_kms::Client as KmsClient;
 
 use crate::AwsKmsConfig;
-use secret_storage::Error;
 use secret_storage::Result;
+
+#[cfg(feature = "profile")]
+use secret_storage::Error;
 
 pub async fn create_kms_client_from_config(config: &AwsKmsConfig) -> Result<KmsClient> {
   let aws_config = aws_config::defaults(aws_config::BehaviorVersion::latest())

@@ -1,0 +1,57 @@
+{
+  "name": "@iota/multi-schema-to-iota-wasm",
+  "version": "0.0.1",
+  "author": "IOTA Foundation <info@iota.org>",
+  "description": "",
+  "homepage": "https://www.iota.org",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iotaledger/secret-storage"
+  },
+  "directories": {
+    "example": "examples"
+  },
+  "scripts": {
+    "build:src": "cargo build --lib --release --target wasm32-unknown-unknown --target-dir ../target",
+    "build:src:nodejs": "cargo build --lib --release --target wasm32-unknown-unknown --target-dir ../target",
+    "prebundle:nodejs": "rimraf node",
+    "bundle:nodejs": "wasm-bindgen ../target/wasm32-unknown-unknown/release/multi_schema_to_iota_wasm.wasm --typescript --weak-refs --target nodejs --out-dir node && node ../build/node multi_schema_to_iota_wasm && tsc --project ./lib/tsconfig.json && node ../build/replace_paths ./lib/tsconfig.json node multi_schema_to_iota_wasm",
+    "build:nodejs": "npm run build:src:nodejs && npm run bundle:nodejs && wasm-opt -O node/multi_schema_to_iota_wasm_bg.wasm -o node/multi_schema_to_iota_wasm_bg.wasm",
+    "build:docs": "typedoc && npm run fix_docs",
+    "build": "npm run build:nodejs && npm run build:docs",
+    "example:node": "ts-node --project tsconfig.node.json -r tsconfig-paths/register ./examples/src/main.ts",
+    "test": "npm run test:unit:node && npm run test:readme && npm run test:node && npm run test:browser:parallel",
+    "test:node": "ts-mocha -r tsconfig-paths/register -p tsconfig.node.json ./examples/src/tests/*.ts --parallel --jobs 4 --retries 3 --timeout 180000 --exit",
+    "test:readme": "mocha ./tests/txm_readme.js --retries 3 --timeout 180000 --exit",
+    "test:readme:rust": "mocha ./tests/txm_readme_rust.js --retries 3 --timeout 360000 --exit",
+    "test:unit:node": "ts-mocha -p tsconfig.node.json ./tests/*.ts --parallel --exit",
+    "cypress": "cypress open",
+    "fmt": "dprint fmt",
+    "// fix_docs": "find ./docs/wasm/ -type f -name '*.md' -exec sed -E -i.bak -e 's/(\\.md?#([^#]*)?)#/\\1/' {} ';' -exec rm {}.bak ';'",
+    "fix_docs": ""
+  },
+  "bugs": {
+    "url": "https://github.com/iotaledger/secret-storage/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "node/*"
+  ],
+  "dependencies": { },
+  "devDependencies": {
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.1.0",
+    "typedoc": "^0.28.17",
+    "typedoc-plugin-markdown": "^4.4.1",
+    "wasm-opt": "^1.4.0"
+  },
+  "peerDependencies": {
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -3,6 +3,7 @@ use std::error::Error;
 use async_trait::async_trait;
 use blake2::Blake2b;
 use blake2::Digest;
+use fastcrypto::traits::ToFromBytes;
 use iota_interaction::OptionalSync;
 use iota_interaction::shared_crypto::intent::Intent;
 use iota_interaction::shared_crypto::intent::IntentMessage;
@@ -10,7 +11,6 @@ use iota_interaction::types::crypto::Ed25519IotaSignature;
 use iota_interaction::types::crypto::IotaSignatureInner as _;
 use iota_interaction::types::crypto::Secp256k1IotaSignature;
 use iota_interaction::types::crypto::Secp256r1IotaSignature;
-use iota_interaction::types::crypto::ToFromBytes as _;
 use multi_schema::SignatureSchemeMulti;
 use secret_storage::Signer;
 
@@ -75,32 +75,27 @@ pub fn to_iota_signature(
     signature: &[u8],
     public_key_iota: &SignatureSchemeIotaPublicKey,
 ) -> Result<Vec<u8>, Box<dyn Error>> {
-    // return Ok(signature.to_vec());
-    let (r_bytes, s_bytes) = match public_key_iota.scheme() {
-        Secp256r1IotaSignature::SCHEME => {
-            // let signature = p256::ecdsa::Signature::from_der(signature).unwrap(); // der encoding already undone
-            let signature = p256::ecdsa::Signature::from_bytes(signature.into()).unwrap();
-            let (r, s) = signature.split_bytes();
-            // Canonicalize s value for IOTA compliance
-            let s_canonical = canonicalize_s_value_secp256r1(&s)?;
+    let scheme = public_key_iota.scheme().to_string();
+    let (r_bytes, s_bytes) = if scheme == Secp256r1IotaSignature::SCHEME.to_string() {
+        let signature = p256::ecdsa::Signature::from_bytes(signature.into()).unwrap();
+        let (r, s) = signature.split_bytes();
+        // Canonicalize s value for IOTA compliance
+        let s_canonical = canonicalize_s_value_secp256r1(&s)?;
 
-            (r.to_vec(), s_canonical.to_vec())
-        }
-        Secp256k1IotaSignature::SCHEME => {
-            // let signature = k256::ecdsa::Signature::from_der(signature).unwrap(); // der encoding already undone
-            let signature = k256::ecdsa::Signature::from_bytes(signature.into()).unwrap();
-            let (r, s) = signature.split_bytes();
-            // Canonicalize s value for IOTA compliance
-            let s_canonical = canonicalize_s_value_secp256k1(&s)?;
+        (r.to_vec(), s_canonical.to_vec())
+    } else if scheme == Secp256k1IotaSignature::SCHEME.to_string() {
+        let signature = k256::ecdsa::Signature::from_bytes(signature.into()).unwrap();
+        let (r, s) = signature.split_bytes();
+        // Canonicalize s value for IOTA compliance
+        let s_canonical = canonicalize_s_value_secp256k1(&s)?;
 
-            (r.to_vec(), s_canonical.to_vec())
-        }
-        Ed25519IotaSignature::SCHEME => {
-            let signature = ed25519::Signature::from_slice(signature).unwrap();
+        (r.to_vec(), s_canonical.to_vec())
+    } else if scheme == Ed25519IotaSignature::SCHEME.to_string() {
+        let signature = ed25519::Signature::from_slice(signature).unwrap();
 
-            (signature.r_bytes().to_vec(), signature.s_bytes().to_vec())
-        }
-        scheme => return Err(format!("Unsupported public key scheme: {}", scheme).into()),
+        (signature.r_bytes().to_vec(), signature.s_bytes().to_vec())
+    } else {
+        return Err(format!("Unsupported public key scheme: {}", scheme).into());
     };
 
     let sig_bytes = concat_signature(&public_key_iota, &r_bytes, &s_bytes);

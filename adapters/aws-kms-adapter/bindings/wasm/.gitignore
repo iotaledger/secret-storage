@@ -21,3 +21,5 @@ runner-results
 cypress/parallel-weights.json
 
 .DS_STORE
+
+aws_kms_adapter_wasm/docs/

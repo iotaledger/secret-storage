@@ -119,10 +119,14 @@ impl AwsKmsStorage {
     }
 
     // Execute KMS key creation
-    let create_response = create_key
-      .send()
-      .await
-      .map_err(|e| AwsKmsError::General(format!("Failed to create KMS key: {}", e)))?;
+    let create_response = create_key.send().await.map_err(|e| {
+      AwsKmsError::General(format!(
+        "Failed to create KMS key: {}",
+        e.as_service_error()
+          .map(|se| format!(": {}", &se.meta()))
+          .unwrap_or_default()
+      ))
+    })?;
 
     let kms_key_id = create_response
       .key_metadata

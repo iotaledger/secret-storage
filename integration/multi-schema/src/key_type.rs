@@ -1,5 +1,19 @@
+use serde::Deserialize;
+use serde::Serialize;
+
 #[non_exhaustive]
-#[derive(Clone, Eq, PartialEq, strum::IntoStaticStr, strum::EnumString, strum::Display)]
+#[derive(
+    Serialize,
+    Deserialize,
+    Debug,
+    Clone,
+    Eq,
+    PartialEq,
+    strum::IntoStaticStr,
+    strum::EnumString,
+    strum::Display,
+    strum::VariantNames,
+)]
 pub enum KeyType {
     P256DerEncoded,
     K256DerEncoded,

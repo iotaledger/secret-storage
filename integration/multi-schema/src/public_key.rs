@@ -1,5 +1,10 @@
+use serde::Deserialize;
+use serde::Serialize;
+
 use crate::KeyType;
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct SignatureSchemeMultiPublicKey {
     bytes: Vec<u8>,
     key_type: KeyType,

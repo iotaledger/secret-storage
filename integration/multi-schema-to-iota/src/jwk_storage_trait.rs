@@ -41,10 +41,14 @@ where
         key_type: IdentityStorageKeyType,
         alg: JwsAlgorithm,
     ) -> KeyStorageResult<JwkGenOutput> {
-        let key_type = MultiSchemaKeyType::from_str(&key_type.to_string()).unwrap();
+        let key_type = identity_key_type_to_multi_schema(&key_type)?;
         let signature_type_from_alg: MultiSchemaKeyType = alg_to_key_type(&alg)?;
         if key_type != signature_type_from_alg {
-            panic!("key type and algorithm mismatch");
+            return Err(
+                KeyStorageError::new(KeyStorageErrorKind::UnsupportedKeyType).with_custom_message(
+                    format!("key type \"{key_type}\" does not match algorithm \"{alg}\""),
+                ),
+            );
         }
         let (kms_key_id, public_key) = self
             .inner
@@ -54,13 +58,21 @@ where
                     .map_err(|_| KeyStorageError::new(KeyStorageErrorKind::UnsupportedKeyType))?,
             )
             .await
-            .unwrap();
+            .map_err(|e| {
+                KeyStorageError::new(KeyStorageErrorKind::Unspecified)
+                    .with_custom_message(e.to_string())
+            })?;
 
         let public_key_iota =
             convert_public_key_der_to_iota_public_key(&public_key.bytes(), &public_key.key_type())
-                .unwrap();
+                .map_err(|e| {
+                    KeyStorageError::new(KeyStorageErrorKind::Unspecified)
+                        .with_custom_message(e.to_string())
+                })?;
 
-        let mut jwk = ToJwk::to_jwk(&public_key_iota).unwrap();
+        let mut jwk = ToJwk::to_jwk(&public_key_iota).map_err(|e| {
+            KeyStorageError::new(KeyStorageErrorKind::Unspecified).with_custom_message(e.to_string())
+        })?;
         jwk.set_kid(jwk.thumbprint_sha256_b64());
 
         Ok(JwkGenOutput::new(KeyId::new(kms_key_id), jwk))
@@ -99,19 +111,46 @@ where
                     .try_into()
                     .map_err(|_| KeyStorageError::new(KeyStorageErrorKind::UnsupportedKeyType))?,
             )
-            .unwrap();
+            .map_err(|e| {
+                KeyStorageError::new(KeyStorageErrorKind::Unspecified)
+                    .with_custom_message(e.to_string())
+            })?;
 
-        let signature = inner_signer.sign(&data.to_vec()).await.unwrap();
+        let signature = inner_signer
+            .sign(&data.to_vec())
+            .await
+            .map_err(|e| {
+                KeyStorageError::new(KeyStorageErrorKind::Unspecified)
+                    .with_custom_message(e.to_string())
+            })?;
 
         Ok(signature.bytes().clone())
     }
 
     async fn delete(&self, key_id: &KeyId) -> KeyStorageResult<()> {
-        Ok(self.inner.delete(&key_id.to_string()).await.unwrap())
+        self.inner.delete(&key_id.to_string()).await.map_err(|e| {
+            KeyStorageError::new(KeyStorageErrorKind::Unspecified).with_custom_message(e.to_string())
+        })
     }
 
     async fn exists(&self, key_id: &KeyId) -> KeyStorageResult<bool> {
-        Ok(self.inner.exist(&key_id.to_string()).await.unwrap())
+        self.inner.exist(&key_id.to_string()).await.map_err(|e| {
+            KeyStorageError::new(KeyStorageErrorKind::Unspecified).with_custom_message(e.to_string())
+        })
+    }
+}
+
+fn identity_key_type_to_multi_schema(
+    key_type: &IdentityStorageKeyType,
+) -> KeyStorageResult<MultiSchemaKeyType> {
+    match key_type.as_str() {
+        "Ed25519" => Ok(MultiSchemaKeyType::Ed25519DerEncoded),
+        "secp256r1" => Ok(MultiSchemaKeyType::P256DerEncoded),
+        "secp256k1" => Ok(MultiSchemaKeyType::K256DerEncoded),
+        other => Err(
+            KeyStorageError::new(KeyStorageErrorKind::UnsupportedKeyType)
+                .with_custom_message(format!("key type \"{}\" is not supported", other)),
+        ),
     }
 }
 
