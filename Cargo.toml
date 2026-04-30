@@ -22,3 +22,12 @@ async-trait = "0.1"
 
 [patch."https://github.com/iotaledger/secret-storage.git"]
 secret-storage = { path = "core/secret-storage", package = "secret-storage" }
+
+[patch."https://tbd-github.com/iotaledger/aws-kms-adapter.git"]
+aws-kms-adapter = { path = "adapters/aws-kms-adapter", package = "aws-kms-adapter" }
+
+[patch."https://tbd-github.com/iotaledger/multi-schema.git"]
+multi-schema = { path = "integration/multi-schema" }
+
+[patch."https://tbd-github.com/iotaledger/multi-schema-to-iota.git"]
+multi-schema-to-iota = { path = "integration/multi-schema-to-iota" }

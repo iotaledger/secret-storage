@@ -37,10 +37,10 @@ iota_interaction = { git = "https://github.com/iotaledger/product-core.git", tag
 iota_interaction_ts = { git = "https://github.com/iotaledger/product-core.git", tag = "v0.8.14", package = "iota_interaction_ts" }
 # js-sys = { version = "=0.3.79" }
 js-sys = { version = "=0.3.85" }
-multi-schema = { path = "../../../../../integration/multi-schema", default-features = false }
+multi-schema = { git = "https://tbd-github.com/iotaledger/multi-schema.git", tag = "tbd", default-features = false }
 multi-schema-to-iota = { path = "../../..", default-features = false }
 reqwest = { version = "0.12", default-features = false, features = ["json"] }
-secret-storage = { path = "../../../../../core/secret-storage", default-features = false }
+secret-storage = { git = "https://github.com/iotaledger/secret-storage.git", tag = "v0.3.0", default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 serde-wasm-bindgen = "0.6.5"
 # wasm-8indgen = { version = "=0.2.102", features = ["serde-serialize"] }
@@ -69,4 +69,7 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(wasm_bindgen_unstable_test
 default = []
 
 [patch."https://github.com/iotaledger/secret-storage.git"]
-secret-storage = { path = "../../../../../core/secret-storage", package = "secret-storage" } 
+secret-storage = { path = "../../../../../core/secret-storage", package = "secret-storage" }
+
+[patch."https://tbd-github.com/iotaledger/multi-schema.git"]
+multi-schema = { path = "../../../../../integration/multi-schema" }

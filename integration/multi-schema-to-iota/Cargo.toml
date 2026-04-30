@@ -13,14 +13,20 @@ fastcrypto = { git = "https://github.com/MystenLabs/fastcrypto", rev = "69d496c7
 identity_iota = { git = "https://github.com/iotaledger/identity.git", tag = "v1.7.0-beta.4", package = "identity_iota", default-features = false }
 iota_interaction = { git = "https://github.com/iotaledger/product-core.git", tag = "v0.8.6", package = "iota_interaction", default-features = false }
 k256 = { version = "0.13.3", default-features = false, features = ["std", "ecdsa", "ecdsa-core", "jwk"] }
-multi-schema = { path = "../../integration/multi-schema", default-features = false}
+multi-schema = { git = "https://tbd-github.com/iotaledger/multi-schema.git", tag = "tbd", default-features = false }
 p256 = { version = "0.13.2", default-features = false, features = ["std", "ecdsa", "ecdsa-core", "jwk", "arithmetic"] }
 pkcs8 = { version = "0.10", features = ["std"] }
-secret-storage = { path = "../../core/secret-storage", package = "secret-storage", default-features = false}
+secret-storage = { git = "https://github.com/iotaledger/secret-storage.git", tag = "v0.3.0", package = "secret-storage", default-features = false }
 typenum = { version = "1.0" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom_0_2 = { package = "getrandom", version = "0.2", default-features = false, features = ["js"] }
+
+[patch."https://github.com/iotaledger/secret-storage.git"]
+secret-storage = { path = "../../core/secret-storage", package = "secret-storage" }
+
+[patch."https://tbd-github.com/iotaledger/multi-schema.git"]
+multi-schema = { path = "../../integration/multi-schema" }
 
 [features]
 default = ["send-sync-storage"]

@@ -4,10 +4,13 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-secret-storage = { path = "../../core/secret-storage", package = "secret-storage", default-features = false}
+secret-storage = { git = "https://github.com/iotaledger/secret-storage.git", tag = "v0.3.0", package = "secret-storage", default-features = false }
 serde = { version = "1.0", features = ["derive", "alloc"] }
 serde_json = { version = "1.0", features = ["alloc"] }
 strum = { version = "0.27", features = ["derive"] }
+
+[patch."https://github.com/iotaledger/secret-storage.git"]
+secret-storage = { path = "../../core/secret-storage", package = "secret-storage" }
 
 [features]
 default = ["send-sync"]
