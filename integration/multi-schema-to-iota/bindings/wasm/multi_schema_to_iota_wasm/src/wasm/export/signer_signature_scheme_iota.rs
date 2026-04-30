@@ -1,3 +1,6 @@
+// Copyright 2020-2026 IOTA Stiftung
+// SPDX-License-Identifier: Apache-2.0
+
 use fastcrypto::traits::EncodeDecodeBase64;
 use identity_iota::iota_interaction::IotaKeySignature;
 use iota_interaction_ts::wasm_error::{self, WasmResult};
