@@ -3,9 +3,6 @@
 
 use js_sys::Uint8Array;
 use multi_schema::KeyType;
-use serde::Deserialize;
-use serde::Serialize;
-use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsValue;
 
@@ -18,15 +15,25 @@ const I_TX_SIGNER: &str = r#"
 type SignatureSchemeMultiInput = Uint8Array;
 "#;
 
-#[derive(Tsify, Serialize, Deserialize, strum::Display)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
-pub enum WasmKeyType {
-  P256DerEncoded,
-  K256DerEncoded,
-  Ed25519DerEncoded,
-  #[serde(rename = "custom")]
-  Custom(String),
+// `tsify` derives the TypeScript type name from the Rust identifier.
+// Private module plus re-exporting with `Wasm` prefix keeps internal Rust names consistent.
+mod key_type {
+  use serde::Deserialize;
+  use serde::Serialize;
+  use tsify::Tsify;
+
+  #[derive(Tsify, Serialize, Deserialize, strum::Display)]
+  #[tsify(into_wasm_abi, from_wasm_abi)]
+  pub enum KeyType {
+    P256DerEncoded,
+    K256DerEncoded,
+    Ed25519DerEncoded,
+    #[serde(rename = "custom")]
+    Custom(String),
+  }
 }
+
+pub use key_type::KeyType as WasmKeyType;
 
 impl TryFrom<&KeyType> for WasmKeyType {
   type Error = JsValue;
