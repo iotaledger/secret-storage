@@ -3,10 +3,6 @@
 
 use anyhow::anyhow;
 use async_trait::async_trait;
-use iota_interaction::types::crypto::{PublicKey, Signature, SignatureScheme};
-use iota_interaction::types::transaction::TransactionData;
-use iota_interaction::IotaKeySignature;
-use js_sys::{JsString, Uint8Array};
 use multi_schema::SignatureSchemeMulti;
 use secret_storage::Error as SecretStorageError;
 use secret_storage::Signer;
@@ -76,12 +72,12 @@ impl Signer<SignatureSchemeMulti> for WasmSignerSignatureSchemeMulti {
                 .map(|v| format!("; {v}"))
                 .unwrap_or_default();
             let message = format!("could not sign data{details}");
-            SecretStorageError::Other(anyhow::anyhow!(message))
+            SecretStorageError::Other(anyhow!(message))
         })?;
         let parsed = serde_wasm_bindgen::from_value(js_value).map_err(|err| {
             let details = err.to_string();
             let message = format!("could not sign data{details}");
-            SecretStorageError::Other(anyhow::anyhow!(message))
+            SecretStorageError::Other(anyhow!(message))
         })?;
 
         Ok(parsed)
@@ -96,12 +92,12 @@ impl Signer<SignatureSchemeMulti> for WasmSignerSignatureSchemeMulti {
                 .map(|v| format!("; {v}"))
                 .unwrap_or_default();
             let message = format!("could not sign data{details}");
-            SecretStorageError::Other(anyhow::anyhow!(message))
+            SecretStorageError::Other(anyhow!(message))
         })?;
         let parsed = serde_wasm_bindgen::from_value(js_value).map_err(|err| {
             let details = err.to_string();
             let message = format!("could not sign data{details}");
-            SecretStorageError::Other(anyhow::anyhow!(message))
+            SecretStorageError::Other(anyhow!(message))
         })?;
 
         Ok(parsed)

@@ -1,6 +1,7 @@
 // Copyright 2020-2024 IOTA Stiftung
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::anyhow;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -30,15 +31,15 @@ impl From<AwsKmsError> for secret_storage::Error {
     match err {
       AwsKmsError::KeyNotFound(id) => secret_storage::Error::KeyNotFound(id),
       AwsKmsError::KmsService(e) => secret_storage::Error::StoreDisconnected(e.to_string()),
-      AwsKmsError::Configuration(e) => secret_storage::Error::Other(anyhow::anyhow!(e)),
-      AwsKmsError::UnsupportedKeyType(e) => secret_storage::Error::Other(anyhow::anyhow!(e)),
+      AwsKmsError::Configuration(e) => secret_storage::Error::Other(anyhow!(e)),
+      AwsKmsError::UnsupportedKeyType(e) => secret_storage::Error::Other(anyhow!(e)),
       AwsKmsError::UnsupportedKeyUsage(_) => secret_storage::Error::InvalidOptions,
-      AwsKmsError::InvalidKeyFormat(e) => secret_storage::Error::Other(anyhow::anyhow!(e)),
-      AwsKmsError::InvalidSigningAlgorithmFormat(e) => secret_storage::Error::Other(anyhow::anyhow!(e)),
+      AwsKmsError::InvalidKeyFormat(e) => secret_storage::Error::Other(anyhow!(e)),
+      AwsKmsError::InvalidSigningAlgorithmFormat(e) => secret_storage::Error::Other(anyhow!(e)),
       AwsKmsError::MissingEnvVar(e) => {
-        secret_storage::Error::Other(anyhow::anyhow!("Missing environment variable: {}", e))
+        secret_storage::Error::Other(anyhow!("Missing environment variable: {}", e))
       }
-      AwsKmsError::General(e) => secret_storage::Error::Other(anyhow::anyhow!(e)),
+      AwsKmsError::General(e) => secret_storage::Error::Other(anyhow!(e)),
     }
   }
 }

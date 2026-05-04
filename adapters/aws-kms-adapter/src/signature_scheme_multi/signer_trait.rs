@@ -1,6 +1,7 @@
 // Copyright 2020-2024 IOTA Stiftung
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::anyhow;
 use async_trait::async_trait;
 use aws_sdk_kms::types::SigningAlgorithmSpec;
 use k256::ecdsa::Signature as K256Signature;
@@ -33,7 +34,7 @@ impl Signer<SignatureSchemeMulti> for AwsKmsSigner {
       .send()
       .await
       .map_err(|e| {
-        secret_storage::Error::Other(anyhow::anyhow!(
+        secret_storage::Error::Other(anyhow!(
           "AWS KMS signing failed for key {}{}",
           key_id,
           e.as_service_error()
@@ -44,13 +45,13 @@ impl Signer<SignatureSchemeMulti> for AwsKmsSigner {
 
     let signature = sign_response
       .signature
-      .ok_or_else(|| secret_storage::Error::Other(anyhow::anyhow!("No signature returned from AWS KMS")))?
+      .ok_or_else(|| secret_storage::Error::Other(anyhow!("No signature returned from AWS KMS")))?
       .into_inner();
 
     let signature = match self.key_spec {
       KeySpec::EccNistP256 => P256Signature::from_der(&signature)
         .map_err(|e| {
-          secret_storage::Error::Other(anyhow::anyhow!(
+          secret_storage::Error::Other(anyhow!(
             "Failed to parse P256Signature from AWS KMS response; {}",
             e,
           ))
@@ -58,7 +59,7 @@ impl Signer<SignatureSchemeMulti> for AwsKmsSigner {
         .to_vec(),
       KeySpec::EccSecgP256K1 => K256Signature::from_der(&signature)
         .map_err(|e| {
-          secret_storage::Error::Other(anyhow::anyhow!(
+          secret_storage::Error::Other(anyhow!(
             "Failed to parse K256Signature from AWS KMS response; {}",
             e,
           ))

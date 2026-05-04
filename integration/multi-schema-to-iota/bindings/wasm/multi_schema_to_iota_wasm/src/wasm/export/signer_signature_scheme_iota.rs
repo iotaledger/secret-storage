@@ -1,9 +1,10 @@
 // Copyright 2020-2026 IOTA Stiftung
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::anyhow;
 use fastcrypto::traits::EncodeDecodeBase64;
 use identity_iota::iota_interaction::IotaKeySignature;
-use iota_interaction_ts::wasm_error::{self, WasmResult};
+use iota_interaction_ts::wasm_error::WasmResult;
 use multi_schema_to_iota::IotaCompatibleSigner;
 use secret_storage::Signer;
 use wasm_bindgen::prelude::*;
@@ -33,7 +34,7 @@ impl WasmIotaCompatibleSigner {
         Signer::<IotaKeySignature>::sign(&self.0, &tx_data)
             .await
             .map(|sig| sig.encode_base64())
-            .map_err(|e| anyhow::anyhow!("Failed to sign data: {e}"))
+            .map_err(|e| anyhow!("Failed to sign data: {e}"))
             .wasm_result()
     }
 
@@ -42,7 +43,7 @@ impl WasmIotaCompatibleSigner {
         Signer::<IotaKeySignature>::public_key(&self.0)
             .await
             .map(|pk| pk.encode_base64())
-            .map_err(|e| anyhow::anyhow!("Failed to get public key: {e}"))
+            .map_err(|e| anyhow!("Failed to get public key: {e}"))
             .wasm_result()
     }
 
@@ -50,7 +51,7 @@ impl WasmIotaCompatibleSigner {
     pub async fn iota_public_key_bytes(&self) -> Result<Vec<u8>> {
         let pk = Signer::<IotaKeySignature>::public_key(&self.0)
             .await
-            .map_err(|e| anyhow::anyhow!("Failed to get public key: {e}"))
+            .map_err(|e| anyhow!("Failed to get public key: {e}"))
             .wasm_result()?;
         let mut bytes = Vec::with_capacity(1 + pk.as_ref().len());
         bytes.push(pk.flag());
