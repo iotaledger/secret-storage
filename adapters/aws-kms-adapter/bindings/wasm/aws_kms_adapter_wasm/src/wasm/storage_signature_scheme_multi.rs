@@ -12,8 +12,8 @@ use secret_storage::KeyGet as _;
 use secret_storage::KeySignWithOptions;
 use wasm_bindgen::prelude::*;
 
-use crate::error::wasm_error;
 use crate::error::Result;
+use crate::error::WasmResult as _;
 use crate::utils::aws::StaticCredentials;
 use crate::utils::aws::WasmHttpClient;
 use crate::utils::aws::WasmSleep;
@@ -97,7 +97,7 @@ impl WasmAwsKmsStorage {
       .generate_key_with_options((&options).try_into().unwrap())
       .await
       .map(|(key_id, pub_key)| NewKeyData::new(key_id, WasmSignatureSchemeMultiPublicKey(pub_key)))
-      .map_err(wasm_error)
+      .wasm_result()
   }
 }
 
@@ -111,7 +111,7 @@ impl WasmAwsKmsStorage {
       .public_key(&key_id)
       .await
       .map(WasmSignatureSchemeMultiPublicKey)
-      .map_err(wasm_error)
+      .wasm_result()
   }
 }
 
@@ -119,7 +119,7 @@ impl WasmAwsKmsStorage {
 #[wasm_bindgen(js_class = AwsKmsStorage)]
 impl WasmAwsKmsStorage {
   pub async fn delete(&self, key_id: String) -> Result<()> {
-    self.0.delete(&key_id).await.map_err(wasm_error)
+    self.0.delete(&key_id).await.wasm_result()
   }
 }
 
@@ -127,7 +127,7 @@ impl WasmAwsKmsStorage {
 #[wasm_bindgen(js_class = AwsKmsStorage)]
 impl WasmAwsKmsStorage {
   pub async fn exist(&self, key_id: String) -> Result<bool> {
-    self.0.exist(&key_id).await.map_err(wasm_error)
+    self.0.exist(&key_id).await.wasm_result()
   }
 }
 
@@ -144,6 +144,6 @@ impl WasmAwsKmsStorage {
       .0
       .get_signer_with_options(&key_id, &signature_type.try_into().unwrap())
       .map(WasmSignerSignatureSchemeMulti)
-      .map_err(wasm_error)
+      .wasm_result()
   }
 }

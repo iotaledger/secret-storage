@@ -12,7 +12,8 @@ use wasm_bindgen::JsValue;
 pub type Result<T> = core::result::Result<T, JsValue>;
 
 /// Convert an error into an idiomatic [js_sys::Error].
-pub fn wasm_error<'a, E>(error: E) -> JsValue
+/// Not intended to be used directly, but rather through the [WasmResult] trait.
+fn wasm_error<'a, E>(error: E) -> JsValue
 where
     E: Into<WasmError<'a>>,
 {
@@ -31,6 +32,15 @@ where
 {
     fn wasm_result(self) -> Result<T> {
         self.map_err(wasm_error)
+    }
+}
+
+impl From<anyhow::Error> for WasmError<'_> {
+    fn from(value: anyhow::Error) -> Self {
+        Self {
+            name: Cow::Borrowed("Generic Error"),
+            message: Cow::Owned(value.to_string()),
+        }
     }
 }
 
@@ -66,6 +76,3 @@ impl From<WasmError<'_>> for JsValue {
         JsValue::from(js_sys::Error::from(error))
     }
 }
-
-/// Convenience struct to convert Result<JsValue, JsValue> to errors in the Rust library.
-pub struct JsValueResult(pub(crate) Result<JsValue>);

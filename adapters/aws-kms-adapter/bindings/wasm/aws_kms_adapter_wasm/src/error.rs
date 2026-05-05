@@ -13,7 +13,8 @@ use wasm_bindgen::JsValue;
 pub type Result<T> = core::result::Result<T, JsValue>;
 
 /// Convert an error into an idiomatic [js_sys::Error].
-pub fn wasm_error<'a, E>(error: E) -> JsValue
+/// Not intended to be used directly, but rather through the [WasmResult] trait.
+fn wasm_error<'a, E>(error: E) -> JsValue
 where
   E: Into<WasmError<'a>>,
 {
@@ -95,6 +96,3 @@ impl From<secret_storage::Error> for WasmError<'_> {
     }
   }
 }
-
-/// Convenience struct to convert Result<JsValue, JsValue> to errors in the Rust library.
-pub struct JsValueResult(pub(crate) Result<JsValue>);

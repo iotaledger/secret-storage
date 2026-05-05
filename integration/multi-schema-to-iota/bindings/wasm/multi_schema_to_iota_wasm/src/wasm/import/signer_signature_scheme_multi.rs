@@ -66,41 +66,41 @@ impl Signer<SignatureSchemeMulti> for WasmSignerSignatureSchemeMulti {
         &self,
         data: &SignatureSchemeMultiInput,
     ) -> std::result::Result<SignatureSchemeMultiSignature, SecretStorageError> {
-        let js_value: JsValue = self.sign(data.clone()).await.map_err(|err| {
+        let signature_js: JsValue = self.sign(data.clone()).await.map_err(|err| {
             let details = err
                 .as_string()
                 .map(|v| format!("; {v}"))
                 .unwrap_or_default();
-            let message = format!("could not sign data{details}");
+            let message = format!("could not sign data; {details}");
             SecretStorageError::Other(anyhow!(message))
         })?;
-        let parsed = serde_wasm_bindgen::from_value(js_value).map_err(|err| {
+        let signature_parsed = serde_wasm_bindgen::from_value(signature_js).map_err(|err| {
             let details = err.to_string();
-            let message = format!("could not sign data{details}");
+            let message = format!("could not parse signature; {details}");
             SecretStorageError::Other(anyhow!(message))
         })?;
 
-        Ok(parsed)
+        Ok(signature_parsed)
     }
 
     async fn public_key(
         &self,
     ) -> std::result::Result<SignatureSchemeMultiPublicKey, SecretStorageError> {
-        let js_value: JsValue = self.public_key().await.map_err(|err| {
+        let public_key_js: JsValue = self.public_key().await.map_err(|err| {
             let details = err
                 .as_string()
                 .map(|v| format!("; {v}"))
                 .unwrap_or_default();
-            let message = format!("could not sign data{details}");
+            let message = format!("could not get public key; {details}");
             SecretStorageError::Other(anyhow!(message))
         })?;
-        let parsed = serde_wasm_bindgen::from_value(js_value).map_err(|err| {
+        let public_key_parsed = serde_wasm_bindgen::from_value(public_key_js).map_err(|err| {
             let details = err.to_string();
-            let message = format!("could not sign data{details}");
+            let message = format!("could not parse public key; {details}");
             SecretStorageError::Other(anyhow!(message))
         })?;
 
-        Ok(parsed)
+        Ok(public_key_parsed)
     }
 
     fn key_id(&self) -> String {

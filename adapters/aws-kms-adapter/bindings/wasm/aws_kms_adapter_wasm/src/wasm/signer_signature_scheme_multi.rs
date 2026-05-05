@@ -6,8 +6,8 @@ use js_sys::Uint8Array;
 use secret_storage::Signer;
 use wasm_bindgen::prelude::*;
 
-use crate::error::wasm_error;
 use crate::error::Result;
+use crate::error::WasmResult as _;
 use crate::wasm::signature_scheme_multi::WasmSignatureSchemeMultiPublicKey;
 use crate::wasm::signature_scheme_multi::WasmSignatureSchemeMultiSignature;
 
@@ -26,7 +26,7 @@ impl WasmSignerSignatureSchemeMulti {
       .sign(&data.to_vec())
       .await
       .map(WasmSignatureSchemeMultiSignature)
-      .map_err(wasm_error)
+      .wasm_result()
   }
 
   #[wasm_bindgen(js_name = "publicKey")]
@@ -36,7 +36,7 @@ impl WasmSignerSignatureSchemeMulti {
       .public_key()
       .await
       .map(WasmSignatureSchemeMultiPublicKey)
-      .map_err(wasm_error)
+      .wasm_result()
   }
 
   #[wasm_bindgen(js_name = "keyId")]

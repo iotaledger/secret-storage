@@ -4,14 +4,13 @@
 use anyhow::anyhow;
 use fastcrypto::traits::EncodeDecodeBase64;
 use identity_iota::iota_interaction::IotaKeySignature;
-use iota_interaction_ts::wasm_error::WasmResult;
 use multi_schema_to_iota::IotaCompatibleSigner;
 use secret_storage::Signer;
 use wasm_bindgen::prelude::*;
 
-use crate::{
-    error::Result, wasm::import::signer_signature_scheme_multi::WasmSignerSignatureSchemeMulti,
-};
+use crate::error::Result;
+use crate::error::WasmResult as _;
+use crate::wasm::import::signer_signature_scheme_multi::WasmSignerSignatureSchemeMulti;
 
 #[wasm_bindgen(js_name = IotaCompatibleSigner)]
 pub struct WasmIotaCompatibleSigner(IotaCompatibleSigner<WasmSignerSignatureSchemeMulti>);
