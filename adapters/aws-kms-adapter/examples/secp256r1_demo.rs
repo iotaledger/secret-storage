@@ -21,7 +21,7 @@
 use aws_kms_adapter::AwsKmsKeyOptions;
 use aws_kms_adapter::AwsKmsStorage;
 use aws_kms_adapter::KeySpec;
-use multi_schema::KeyType;
+use multi_signature_scheme::KeyType;
 use secret_storage::KeyExist;
 use secret_storage::KeyGenerate;
 use secret_storage::KeyGet;

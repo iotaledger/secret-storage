@@ -6,13 +6,13 @@ members = [
     "adapters/vault-adapter",
     "applications/storage-factory",
     "applications/hv-iota-e2e-test",
-    "integration/multi-schema",
-    "integration/multi-schema-to-iota",
+    "integration/multi-signature-scheme",
+    "integration/multi-signature-scheme-to-iota",
 ]
 
 exclude = [
     "adapters/aws-kms-adapter/bindings/wasm/aws-kms-adapter-wasm",
-    "integration/multi-schema-to-iota-wasm",
+    "integration/multi-signature-scheme-to-iota-wasm",
 ]
 
 [workspace.dependencies]
@@ -26,8 +26,8 @@ secret-storage = { path = "core/secret-storage", package = "secret-storage" }
 [patch."https://tbd-github.com/iotaledger/aws-kms-adapter.git"]
 aws-kms-adapter = { path = "adapters/aws-kms-adapter", package = "aws-kms-adapter" }
 
-[patch."https://tbd-github.com/iotaledger/multi-schema.git"]
-multi-schema = { path = "integration/multi-schema" }
+[patch."https://tbd-github.com/iotaledger/multi-signature-scheme.git"]
+multi-signature-scheme = { path = "integration/multi-signature-scheme" }
 
-[patch."https://tbd-github.com/iotaledger/multi-schema-to-iota.git"]
-multi-schema-to-iota = { path = "integration/multi-schema-to-iota" }
+[patch."https://tbd-github.com/iotaledger/multi-signature-scheme-to-iota.git"]
+multi-signature-scheme-to-iota = { path = "integration/multi-signature-scheme-to-iota" }

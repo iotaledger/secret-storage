@@ -3,7 +3,7 @@
 
 use aws_sdk_kms::types::KeySpec as AwsKeySpec;
 use aws_sdk_kms::types::SigningAlgorithmSpec as AwsSigningAlgorithmSpec;
-use multi_schema::KeyType;
+use multi_signature_scheme::KeyType;
 use serde::Deserialize;
 use serde::Serialize;
 use std::str::FromStr;

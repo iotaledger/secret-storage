@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use js_sys::Uint8Array;
-use multi_schema::KeyType;
+use multi_signature_scheme::KeyType;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsValue;
 

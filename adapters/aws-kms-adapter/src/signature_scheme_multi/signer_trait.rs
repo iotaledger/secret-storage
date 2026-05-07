@@ -5,9 +5,9 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use aws_sdk_kms::types::SigningAlgorithmSpec;
 use k256::ecdsa::Signature as K256Signature;
-use multi_schema::SignatureSchemeMulti;
-use multi_schema::SignatureSchemeMultiPublicKey;
-use multi_schema::SignatureSchemeMultiSignature;
+use multi_signature_scheme::SignatureSchemeMulti;
+use multi_signature_scheme::SignatureSchemeMultiPublicKey;
+use multi_signature_scheme::SignatureSchemeMultiSignature;
 use p256::ecdsa::Signature as P256Signature;
 use secret_storage::Signer;
 

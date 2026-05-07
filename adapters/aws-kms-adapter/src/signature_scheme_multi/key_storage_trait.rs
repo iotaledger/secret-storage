@@ -4,9 +4,9 @@
 use async_trait::async_trait;
 
 use aws_sdk_kms::types::KeyState;
-use multi_schema::KeyType;
-use multi_schema::SignatureSchemeMulti;
-use multi_schema::SignatureSchemeMultiPublicKey;
+use multi_signature_scheme::KeyType;
+use multi_signature_scheme::SignatureSchemeMulti;
+use multi_signature_scheme::SignatureSchemeMultiPublicKey;
 use secret_storage::KeyDelete;
 use secret_storage::KeyExist;
 use secret_storage::KeyGenerate;

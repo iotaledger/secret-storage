@@ -1,4 +1,4 @@
-use multi_schema::KeyIdDefinition;
+use multi_signature_scheme::KeyIdDefinition;
 
 use crate::AwsKmsStorage;
 

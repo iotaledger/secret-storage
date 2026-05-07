@@ -1,0 +1,11 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@iota/multi-signature-scheme-to-iota-wasm/*": [
+        "./*"
+      ]
+    }
+  }
+}
