@@ -23,5 +23,3 @@ cypress/parallel-weights.json
 .DS_STORE
 
 target
-
-multi_schema_to_iota_wasm/docs/
