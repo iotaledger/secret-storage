@@ -25,8 +25,8 @@ mod key_type {
   #[derive(Tsify, Serialize, Deserialize, strum::Display)]
   #[tsify(into_wasm_abi, from_wasm_abi)]
   pub enum KeyType {
-    P256DerEncoded,
-    K256DerEncoded,
+    Secp256r1DerEncoded,
+    Secp256k1DerEncoded,
     Ed25519DerEncoded,
     #[serde(rename = "custom")]
     Custom(String),
@@ -40,8 +40,8 @@ impl TryFrom<&KeyType> for WasmKeyType {
 
   fn try_from(key_type: &KeyType) -> Result<Self> {
     let wasm_key_type = match key_type {
-      KeyType::P256DerEncoded => WasmKeyType::P256DerEncoded,
-      KeyType::K256DerEncoded => WasmKeyType::K256DerEncoded,
+      KeyType::Secp256r1DerEncoded => WasmKeyType::Secp256r1DerEncoded,
+      KeyType::Secp256k1DerEncoded => WasmKeyType::Secp256k1DerEncoded,
       KeyType::Ed25519DerEncoded => WasmKeyType::Ed25519DerEncoded,
       KeyType::Custom(value) => WasmKeyType::Custom(value.clone()),
       other => {
@@ -58,8 +58,8 @@ impl TryFrom<&WasmKeyType> for KeyType {
 
   fn try_from(wasm_key_type: &WasmKeyType) -> Result<Self> {
     let key_type = match wasm_key_type {
-      WasmKeyType::P256DerEncoded => KeyType::P256DerEncoded,
-      WasmKeyType::K256DerEncoded => KeyType::K256DerEncoded,
+      WasmKeyType::Secp256r1DerEncoded => KeyType::Secp256r1DerEncoded,
+      WasmKeyType::Secp256k1DerEncoded => KeyType::Secp256k1DerEncoded,
       WasmKeyType::Ed25519DerEncoded => KeyType::Ed25519DerEncoded,
       WasmKeyType::Custom(value) => KeyType::Custom(value.clone()),
     };

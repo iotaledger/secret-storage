@@ -30,7 +30,7 @@ fn print_header() {
 }
 
 async fn create_test_key(storage: &AwsKmsStorage) -> Result<String, Box<dyn std::error::Error>> {
-  let (kms_key_id, _public_key) = storage.generate_key_with_options(KeyType::P256DerEncoded).await?;
+  let (kms_key_id, _public_key) = storage.generate_key_with_options(KeyType::Secp256r1DerEncoded).await?;
 
   println!("✅ Created key:");
   println!("   KMS Key ID: {}", kms_key_id);

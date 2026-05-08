@@ -81,7 +81,7 @@ async fn generate_secp256r1_key(storage: &AwsKmsStorage) -> Result<(String, Vec<
 
   println!("📝 Creating new secp256r1 key");
 
-  let (logical_key_id, public_key) = storage.generate_key_with_options(KeyType::K256DerEncoded).await?;
+  let (logical_key_id, public_key) = storage.generate_key_with_options(KeyType::Secp256k1DerEncoded).await?;
   let public_key_der = public_key.bytes();
 
   println!("🔑 Key generation completed!");

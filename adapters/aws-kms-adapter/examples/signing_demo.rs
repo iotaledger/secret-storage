@@ -84,7 +84,7 @@ async fn generate_signing_key(storage: &AwsKmsStorage) -> Result<String, Box<dyn
 
   println!("📝 Creating new secp256r1 signing key...");
 
-  let (key_id, public_key_der) = storage.generate_key_with_options(KeyType::P256DerEncoded).await?;
+  let (key_id, public_key_der) = storage.generate_key_with_options(KeyType::Secp256r1DerEncoded).await?;
 
   println!("🔑 Key generation completed!");
   println!("   📌 Key Id: {}", key_id);
@@ -111,7 +111,7 @@ async fn demonstrate_signing(storage: &AwsKmsStorage, key_id: &str) -> Result<()
 
   println!("📝 Getting signer instance for key: {}", key_id);
   let key_string = key_id.to_string();
-  let signer = storage.get_signer_with_options(&key_string, &KeyType::P256DerEncoded)?;
+  let signer = storage.get_signer_with_options(&key_string, &KeyType::Secp256r1DerEncoded)?;
 
   println!("🔍 Signer created successfully!");
   println!("   📌 Signer Key ID: {}", signer.key_id());
@@ -174,7 +174,7 @@ async fn demonstrate_signer_public_key(
 
   println!("📝 Getting signer instance for key: {}", key_id);
   let key_string = key_id.to_string();
-  let signer = storage.get_signer_with_options(&key_string, &KeyType::P256DerEncoded)?;
+  let signer = storage.get_signer_with_options(&key_string, &KeyType::Secp256r1DerEncoded)?;
 
   println!("🔍 Retrieving public key via signer...");
   let public_key_from_signer = signer.public_key().await?;

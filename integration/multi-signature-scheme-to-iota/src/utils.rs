@@ -30,7 +30,7 @@ pub fn convert_public_key_der_to_iota_public_key(
             )
             .unwrap()
         }
-        KeyType::P256DerEncoded => {
+        KeyType::Secp256r1DerEncoded => {
             let decoded = p256::PublicKey::from_public_key_der(&public_key_der).unwrap();
             let sec1_bytes = decoded.to_sec1_bytes();
             let pk = SignatureSchemeIotaPublicKey::try_from_bytes(
@@ -41,7 +41,7 @@ pub fn convert_public_key_der_to_iota_public_key(
 
             pk
         }
-        KeyType::K256DerEncoded => {
+        KeyType::Secp256k1DerEncoded => {
             let decoded = k256::PublicKey::from_public_key_der(&public_key_der).unwrap();
             let sec1_bytes = decoded.to_sec1_bytes();
             let pk = SignatureSchemeIotaPublicKey::try_from_bytes(

@@ -15,8 +15,8 @@ use serde::Serialize;
     strum::VariantNames,
 )]
 pub enum KeyType {
-    P256DerEncoded,
-    K256DerEncoded,
+    Secp256r1DerEncoded,
+    Secp256k1DerEncoded,
     Ed25519DerEncoded,
     Custom(String),
 }

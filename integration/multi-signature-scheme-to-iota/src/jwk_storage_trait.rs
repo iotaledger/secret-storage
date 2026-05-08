@@ -145,8 +145,8 @@ fn identity_key_type_to_multi_signature_scheme(
 ) -> KeyStorageResult<MultiSignatureSchemeKeyType> {
     match key_type.as_str() {
         "Ed25519" => Ok(MultiSignatureSchemeKeyType::Ed25519DerEncoded),
-        "secp256r1" => Ok(MultiSignatureSchemeKeyType::P256DerEncoded),
-        "secp256k1" => Ok(MultiSignatureSchemeKeyType::K256DerEncoded),
+        "secp256r1" => Ok(MultiSignatureSchemeKeyType::Secp256r1DerEncoded),
+        "secp256k1" => Ok(MultiSignatureSchemeKeyType::Secp256k1DerEncoded),
         other => Err(
             KeyStorageError::new(KeyStorageErrorKind::UnsupportedKeyType)
                 .with_custom_message(format!("key type \"{}\" is not supported", other)),
@@ -156,8 +156,8 @@ fn identity_key_type_to_multi_signature_scheme(
 
 fn alg_to_key_type(alg: &JwsAlgorithm) -> KeyStorageResult<MultiSignatureSchemeKeyType> {
     let key_type = match alg {
-        JwsAlgorithm::ES256 => MultiSignatureSchemeKeyType::P256DerEncoded,
-        JwsAlgorithm::ES256K => MultiSignatureSchemeKeyType::K256DerEncoded,
+        JwsAlgorithm::ES256 => MultiSignatureSchemeKeyType::Secp256r1DerEncoded,
+        JwsAlgorithm::ES256K => MultiSignatureSchemeKeyType::Secp256k1DerEncoded,
         JwsAlgorithm::EdDSA => MultiSignatureSchemeKeyType::Ed25519DerEncoded,
         other => {
             return Err(
