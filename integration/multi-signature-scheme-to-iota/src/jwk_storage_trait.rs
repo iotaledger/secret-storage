@@ -11,13 +11,16 @@ use identity_iota::storage::KeyType as IdentityStorageKeyType;
 use identity_iota::verification::jwk::Jwk;
 use identity_iota::verification::jwk::ToJwk;
 use identity_iota::verification::jws::JwsAlgorithm;
+use iota_interaction::IotaKeySignature;
 use iota_interaction::OptionalSend;
 use iota_interaction::OptionalSync;
+use multi_signature_scheme::KeyIdDefinition;
 use multi_signature_scheme::KeyType as MultiSignatureSchemeKeyType;
 use multi_signature_scheme::SignatureSchemeMulti;
 use secret_storage::KeyDelete;
 use secret_storage::KeyExist;
 use secret_storage::KeyGenerate;
+use secret_storage::KeyGet;
 use secret_storage::KeySignWithOptions;
 use secret_storage::Signer;
 
@@ -137,6 +140,26 @@ where
         self.inner.exist(&key_id.to_string()).await.map_err(|e| {
             KeyStorageError::new(KeyStorageErrorKind::Unspecified).with_custom_message(e.to_string())
         })
+    }
+}
+
+impl<TInner> IotaCompatibleKeyStorage<TInner>
+where
+    TInner: KeyGet<SignatureSchemeMulti, TInner::KeyId> + KeyIdDefinition + OptionalSync,
+{
+    pub async fn public_key_jwk(&self, key_id: &str) -> KeyStorageResult<Jwk> {
+        let public_key = <Self as KeyGet<IotaKeySignature, String>>::public_key(self, &key_id.to_owned())
+            .await
+            .map_err(|e| {
+                KeyStorageError::new(KeyStorageErrorKind::Unspecified)
+                    .with_custom_message(e.to_string())
+            })?;
+        let mut jwk = ToJwk::to_jwk(&public_key).map_err(|e| {
+            KeyStorageError::new(KeyStorageErrorKind::Unspecified)
+                .with_custom_message(e.to_string())
+        })?;
+        jwk.set_kid(jwk.thumbprint_sha256_b64());
+        Ok(jwk)
     }
 }
 

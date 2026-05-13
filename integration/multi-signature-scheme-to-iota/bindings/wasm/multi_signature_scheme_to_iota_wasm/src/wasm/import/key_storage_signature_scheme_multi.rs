@@ -3,6 +3,7 @@
 
 use anyhow::anyhow;
 use async_trait::async_trait;
+use multi_signature_scheme::KeyIdDefinition;
 use multi_signature_scheme::KeyType;
 use multi_signature_scheme::SignatureSchemeMulti;
 use secret_storage::Error as SecretStorageError;
@@ -78,6 +79,10 @@ extern "C" {
 struct NewKeyData {
     key_id: String,
     public_key: SignatureSchemeMultiPublicKey,
+}
+
+impl KeyIdDefinition for WasmKeyStorageSignatureSchemeMulti {
+    type KeyId = String;
 }
 
 #[async_trait(?Send)]
