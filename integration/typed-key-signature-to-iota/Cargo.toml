@@ -22,12 +22,6 @@ typenum = { version = "1.0" }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom_0_2 = { package = "getrandom", version = "0.2", default-features = false, features = ["js"] }
 
-[patch."https://github.com/iotaledger/secret-storage.git"]
-secret-storage = { path = "../../core/secret-storage", package = "secret-storage" }
-
-[patch."https://tbd-github.com/iotaledger/typed-key-signature.git"]
-typed-key-signature = { path = "../../integration/typed-key-signature" }
-
 [features]
 default = ["send-sync-storage"]
 send-sync-storage = [

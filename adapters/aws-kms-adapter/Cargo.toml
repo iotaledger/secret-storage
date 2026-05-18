@@ -47,9 +47,3 @@ send-sync-storage = [
 hex = "0.4"
 tokio-test = "0.4"
 chrono = { version = "0.4", features = ["serde"] }
-
-[patch."https://github.com/iotaledger/secret-storage.git"]
-secret-storage = { path = "../../core/secret-storage", package = "secret-storage" }
-
-[patch."https://tbd-github.com/iotaledger/typed-key-signature.git"]
-typed-key-signature = { path = "../../integration/typed-key-signature" }
