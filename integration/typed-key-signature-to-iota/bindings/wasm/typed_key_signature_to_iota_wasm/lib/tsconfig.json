@@ -1,0 +1,17 @@
+{
+  "extends": "../tsconfig.node.json",
+  "compilerOptions": {
+    "baseUrl": "./",
+    "paths": {
+      "~typed_key_signature_to_iota_wasm": [
+        "../node/typed_key_signature_to_iota_wasm",
+        "./typed_key_signature_to_iota_wasm.js"
+      ],
+      "../lib": [
+        "."
+      ]
+    },
+    "outDir": "../node",
+    "declarationDir": "../node"
+  }
+}

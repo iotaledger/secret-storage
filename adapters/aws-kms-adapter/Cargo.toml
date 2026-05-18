@@ -14,7 +14,7 @@ keywords = ["crypto", "aws", "kms", "storage", "keys"]
 anyhow = "1"
 async-trait = "0.1"
 k256 = { version = "0.13.3", default-features = false, features = ["std", "ecdsa", "ecdsa-core", "jwk"] }
-multi-signature-scheme = { git = "https://tbd-github.com/iotaledger/multi-signature-scheme.git", tag = "tbd", default-features = false }
+typed-key-signature = { git = "https://tbd-github.com/iotaledger/typed-key-signature.git", tag = "tbd", default-features = false }
 p256 = { version = "0.13.2", default-features = false, features = ["std", "ecdsa", "ecdsa-core", "jwk", "arithmetic"] }
 secret-storage = { git = "https://github.com/iotaledger/secret-storage.git", tag = "v0.3.0", default-features = false }
 serde = { version = "1.0", features = ["derive"] }
@@ -39,7 +39,7 @@ default = [
 env = []
 profile = []
 send-sync-storage = [
-    "multi-signature-scheme/send-sync",
+    "typed-key-signature/send-sync",
     "secret-storage/send-sync-storage",
 ]
 
@@ -51,5 +51,5 @@ chrono = { version = "0.4", features = ["serde"] }
 [patch."https://github.com/iotaledger/secret-storage.git"]
 secret-storage = { path = "../../core/secret-storage", package = "secret-storage" }
 
-[patch."https://tbd-github.com/iotaledger/multi-signature-scheme.git"]
-multi-signature-scheme = { path = "../../integration/multi-signature-scheme" }
+[patch."https://tbd-github.com/iotaledger/typed-key-signature.git"]
+typed-key-signature = { path = "../../integration/typed-key-signature" }

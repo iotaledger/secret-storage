@@ -31,4 +31,4 @@ pub use signer::*;
 pub use storage::*;
 pub use utils::*;
 
-pub mod signature_scheme_multi;
+pub mod typed_key_signature;
