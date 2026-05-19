@@ -26,7 +26,7 @@ export interface KeyStorageTypedKeySignature {
   publicKey(keyId: string): Promise<TypedKeySignaturePublicKey>;
   delete(keyId: string): Promise<void>;
   exist(keyId: string): Promise<boolean>;
-  getSignerWithOptions(keyId: string, options: any): SignerTypedKeySignature;
+  getSignerWithOptions(keyId: string, keyType: any): SignerTypedKeySignature;
 }
 "#;
 

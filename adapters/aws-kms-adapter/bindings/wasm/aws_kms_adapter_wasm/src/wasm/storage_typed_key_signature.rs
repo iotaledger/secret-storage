@@ -138,11 +138,11 @@ impl WasmAwsKmsStorage {
   pub fn get_signer_with_options(
     &self,
     key_id: String,
-    signature_type: &WasmKeyType,
+    key_type: &WasmKeyType,
   ) -> Result<WasmSignerTypedKeySignature> {
     self
       .0
-      .get_signer_with_options(&key_id, &signature_type.try_into().unwrap())
+      .get_signer_with_options(&key_id, &key_type.try_into().unwrap())
       .map(WasmSignerTypedKeySignature)
       .wasm_result()
   }
