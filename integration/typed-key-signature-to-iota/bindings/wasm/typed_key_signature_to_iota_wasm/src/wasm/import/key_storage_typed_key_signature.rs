@@ -22,11 +22,11 @@ use crate::wasm::import::signer_typed_key_signature::WasmSignerTypedKeySignature
 #[wasm_bindgen(typescript_custom_section)]
 const I_KEY_STORAGE: &str = r#"
 export interface KeyStorageTypedKeySignature {
-  generateKeyWithOptions(options: any): Promise<{ key_id: string; public_key: TypedKeySignaturePublicKey }>;
+  generateKeyWithOptions(options: KeyType): Promise<{ key_id: string; public_key: TypedKeySignaturePublicKey }>;
   publicKey(keyId: string): Promise<TypedKeySignaturePublicKey>;
   delete(keyId: string): Promise<void>;
   exist(keyId: string): Promise<boolean>;
-  getSignerWithOptions(keyId: string, keyType: any): SignerTypedKeySignature;
+  getSignerWithOptions(keyId: string, keyType: KeyType): SignerTypedKeySignature;
 }
 "#;
 

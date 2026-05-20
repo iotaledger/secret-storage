@@ -29,12 +29,12 @@ export interface SignerTypedKeySignature {
 const ISIGNATURE_SCHEME__MULTI_SIGNATURE: &'static str = r#"
 export interface TypedKeySignaturePublicKey {
     bytes: Uint8Array;
-    keyType: any;
+    keyType: KeyType;
 }
 
 export interface TypedKeySignatureSignature {
     bytes: Uint8Array;
-    keyType: any;
+    keyType: KeyType;
 }
 "#;
 

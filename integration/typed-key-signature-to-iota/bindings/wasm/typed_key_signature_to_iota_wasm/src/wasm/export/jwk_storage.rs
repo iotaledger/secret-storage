@@ -68,12 +68,12 @@ impl WasmIotaCompatibleKeyStorage {
     }
 
     /// Implements `JwkStorage::sign`.
-    /// Note that `public_key` must be a `Jwk` instance created by `identity-wasm`.
+    /// `public_key` is a `Jwk` from `identity-wasm` — passed through JS to cross the WASM memory boundary.
     pub async fn sign(
         &self,
         key_id: String,
         data: &[u8],
-        public_key: JsValue,
+        #[wasm_bindgen(unchecked_param_type = "Jwk")] public_key: JsValue,
     ) -> Result<Uint8Array, JsValue> {
         // Call `toJSON` to copy JWK field values from `identity-wasm`'s WASM memory into a plain JS object.
         let to_json = js_sys::Reflect::get(&public_key, &JsValue::from_str("toJSON"))
