@@ -5,7 +5,6 @@ members = [
     "adapters/aws-kms-adapter",
     "adapters/vault-adapter",
     "applications/storage-factory",
-    "applications/hv-iota-e2e-test",
     "integration/typed-key-signature",
     "integration/typed-key-signature-to-iota",
 ]
@@ -13,6 +12,7 @@ members = [
 exclude = [
     "adapters/aws-kms-adapter/bindings/wasm/aws-kms-adapter-wasm",
     "integration/typed-key-signature-to-iota/bindings/wasm/typed_key_signature_to_iota_wasm",
+    "applications/hv-iota-e2e-test",
 ]
 
 [workspace.dependencies]
