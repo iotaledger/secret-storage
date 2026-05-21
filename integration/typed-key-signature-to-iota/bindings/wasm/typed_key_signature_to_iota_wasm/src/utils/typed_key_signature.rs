@@ -26,4 +26,3 @@ mod key_type {
     }
 }
 
-pub(crate) use key_type::KeyType as WasmKeyType;
