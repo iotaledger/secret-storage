@@ -1,293 +1,149 @@
-# IOTA Secret Storage - Refactored Architecture
+# Secret Storage
 
-A flexible and secure key storage ecosystem for IOTA Trust Framework, following hexagonal architecture principles with modular adapters for different key management strategies.
+## Introduction
 
-## 🏗️ Architecture Overview
+## Cryptographic Key Store Library
 
-This repository implements a multi-layered approach to key management:
+This library offers a comprehensive solution for storing cryptographic keys within Rust applications. It provides a set of traits for creating, signing, deleting, checking the existence of, and retrieving cryptographic keys. This versatility makes it an essential tool for secure key management.
 
-- **Core Domain**: Pure business logic and trait definitions
-- **Adapters**: Infrastructure implementations (AWS KMS, HashiCorp Vault, file system, etc.)
-- **Applications**: Use case orchestration and adapter selection
+The library aims to establish a lightweight standardization layer without introducing any opinionated solutions for key management. It leverages the flexibility of the Iota SDK, allowing the separation of the signing process from the SDK flow. This separation offers a significant advantage for users with existing complex key management solutions, facilitating easier integration and use.
 
-## 📁 Repository Structure
+## Features
 
-```
-secret-storage/
-├── core/
-│   └── secret-storage/              # Core traits and types
-├── adapters/                        # Infrastructure adapters
-│   ├── aws-kms-adapter/            # AWS KMS implementation
-│   └── vault-adapter/              # HashiCorp Vault implementation
-├── applications/                    # Application layer
-│   └── storage-factory/            # Builder pattern for adapter selection
-├── .env.example                    # Environment variables template
-└── README.md
-```
+- **Key Creation**: Easily generate new cryptographic keys.
+- **Key Signing**: Use keys for signing operations.
+- **Key Deletion**: Securely delete keys when they are no longer needed.
+- **Key Existence Check**: Verify the presence of keys in the storage.
+- **Key Retrieval**: Access keys for cryptographic operations.
 
-## 🚀 Quick Start
+## Security aspect
 
-### Option A: AWS KMS
+The library promotes the following security concepts:
 
-#### 1. AWS Configuration Setup
+### Enclave principle
 
-For detailed AWS setup instructions, see [AWS Integration Guide](AWS_INTEGRATION.md).
+The enclave principle in key management refers to the use of secure, isolated environments (enclaves) for the management and protection of cryptographic keys. These enclaves provide a trusted execution environment (TEE) where sensitive operations can be performed securely, even on potentially compromised or untrusted systems.
 
-Quick configuration options:
+**Implementation**: The interfaces are designed with the assumption that private keys cannot be generated or stored outside secure enclaves.
 
-**Option 1: AWS Profile (Recommended)**
-```bash
-export AWS_PROFILE=your-profile-name
-export AWS_REGION=eu-west-1
-```
+### Least privilege principle
 
-**Option 2: Direct Credentials**
-```bash
-export AWS_ACCESS_KEY_ID=your_access_key
-export AWS_SECRET_ACCESS_KEY=your_secret_key
-export AWS_REGION=eu-west-1
-```
+  The system should have only the minimal set of permissions necessary to perform its intended function. This principle aims to reduce the potential damage that could occur if a user, process, or program is compromised or misbehaves.
 
-#### 2. Run IOTA KMS Demo
+**Implementation**: The library specifies atomic 'permissions' such as `KeyRead`, `KeySign`, etc., allowing only the features actually used by the library. This approach prevents alternative, potentially insecure paths from being available to the user.
 
-```bash
-AWS_REGION=eu-west-1 AWS_PROFILE=your-profile cargo run --package storage-factory --example iota_kms_demo
-AWS_REGION=eu-west-1 AWS_PROFILE=developer cargo run --package storage-factory --example iota_kms_demo
+### Explicit boundaries principle
+
+The explicit Boundaries principle involves defining clear and explicit interfaces that separate the provider's code from the user's code. These boundaries ensure that there is a clear contract regarding how the provider's code should be used and what responsibilities it assumes.
+
+**Implementation**: The interface definitions clarify the boundaries between user code and provider code, emphasizing the importance of responsibility for damages caused by insecure code.
+
+## Getting Started
+
+### Prerequisites
+
+This library is built with Rust, so you'll need Rust and Cargo installed on your system. You can install them from [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install).
+
+### Installation
+
+To use this library in your project, add it as a dependency in your `Cargo.toml` file:
+
+```toml
+[dependencies]
+secret-storage = { git="https://github.com/iotaledger/secret-storage"}
 ```
 
-This demo will:
-- Generate a new KMS key with dynamic alias
-- Create an IOTA address from the public key
-- Request testnet funds via faucet
-- Sign and submit an IOTA transaction
+#### Feature flags
 
-### Option B: HashiCorp Vault
+`send-sync-storage` - This feature flag enables the secret storage to be used in a multi-threaded environment. It provides a `Send + Sync` storage implementation.
 
-#### 1. Start Vault Server
+Note: The `send-sync-storage` feature is enabled by default.
 
-```bash
-# Start Vault with Docker Compose
-docker-compose -f docker-compose.vault.yml up -d
+```toml
+[dependencies]
+secret-storage =  { version = "https://github.com/iotaledger/secret-storage", features="[send-sync-storage]" }
 
-# Set environment variables
-export VAULT_ADDR="http://localhost:8200"
-export VAULT_TOKEN="dev-token"
-export VAULT_MOUNT_PATH="transit"
 ```
 
-#### 2. Run IOTA Vault Demo
+## Usage
 
-```bash
-VAULT_ADDR=http://localhost:8200 VAULT_TOKEN=dev-token VAULT_MOUNT_PATH="transit" cargo run --package storage-factory --example iota_vault_demo
-```
-
-This demo will:
-- Generate a new Vault ECDSA P-256 key with dynamic identifier
-- Create an IOTA address from the public key
-- Request testnet funds via faucet (~10 IOTA)
-- Sign and submit an IOTA transaction to testnet
-
-### Manual Adapter Configuration
+The example shows how the secret storage interface can be used when signing the `TransactionData` from [IOTA-SDK](https://github.com/iotaledger/iota):
 
 ```rust
-use storage_factory::StorageBuilder;
+struct ExampleSdkTypes {}
+impl KeySignatureTypes for ExampleSdkTypes {
+    type PublicKey = String;
+    type Signature = Signature;
+}
 
-// Explicit AWS KMS configuration
-let storage = StorageBuilder::new()
-    .aws_kms()
-    .with_region("eu-west-1".to_string())
-    .build_aws_kms()
-    .await?;
+async fn using_signer(
+    client: IotaClient,
+    kms: impl KeysStorage<ExampleSdkTypes, KeyID = String>,
+) -> Result<()> {
+    // Define the account address and module address
+    let account_address = IotaAddress::from_str("").expect("account address must be valid");
+    let module_address = ObjectID::from_str("").expect("object id must be valid");
 
-// HashiCorp Vault configuration
-let storage = StorageBuilder::new()
-    .vault()
-    .build_vault()
-    .await?;
+    // Transaction builder creates a transaction data.
+    // In this case, the transaction calls the `create_new_trail_and_own`` from `trails` module
+    let transaction_data = client
+        .transaction_builder()
+        .move_call(
+            account_address,
+            module_address,
+            "trail",
+            "create_new_trail_and_own",
+            vec![],
+            vec![IotaJsonValue::new(json!("data")).context("failed to serialize immutable data")?],
+            None,
+            1000000000,
+            None,
+        )
+        .await
+        .context("failed building transaction data for creating new trail and owning it");
+
+    // Obtaining the signer from the kms for specific key_id
+    let signer = kms.get_signer("key_id").expect("key not found");
+
+    // Sign the transaction data
+    let signature = signer
+        .sign(transaction_data.get_data_to_sign())
+        .await
+        .unwrap();
+
+    // Create a Transaction that includes the TransactionData and the Signature
+    let transaction = Transaction::from_data(transaction_data, vec![signature]);
+
+    // Send Transaction to using the sdk client
+    let transaction_block_response = client
+        .quorum_driver_api()
+        .execute_transaction_block(transaction, Default::default, None)
+        .await
+        .context("failed to execute transaction block")?;
+
+    Ok(())
+}
 ```
 
-## 🔧 AWS Authentication
+## Crates
 
-The code supports both authentication methods:
+- [core/secret-storage](core/secret-storage) - core traits and types
+- [integration/typed-key-signature](integration/typed-key-signature) - key-type-tagged signature scheme
+- [integration/typed-key-signature-to-iota](integration/typed-key-signature-to-iota) - bridge to the IOTA identity SDK
+- [adapters/aws-kms-adapter](adapters/aws-kms-adapter) - AWS Key Management Service adapter
 
-**Method 1: AWS Profile (Recommended)**
-```bash
-AWS_PROFILE=your-profile-name
-AWS_REGION=eu-west-1
-```
+## Contributing
 
-**Method 2: Direct Credentials**
-```bash
-AWS_ACCESS_KEY_ID=your_access_key
-AWS_SECRET_ACCESS_KEY=your_secret_key
-AWS_REGION=eu-west-1
-```
+Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are greatly appreciated.
 
-The `StorageBuilder` automatically detects which method is available:
-- If `AWS_PROFILE` is set, uses profile-based authentication
-- Otherwise, uses direct credentials from environment variables
+If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement". Don't forget to give the project a star! Thanks again!
 
-See [AWS Integration Guide](AWS_INTEGRATION.md) for detailed configuration instructions.
+- Fork the Project
+- Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+- Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+- Push to the Branch (`git push origin feature/AmazingFeature`)
+- Open a Pull Request
 
-## 🔧 HashiCorp Vault Authentication
+## License
 
-### Standard Mode (Development/Direct Connection)
-
-For HashiCorp Vault, set the following environment variables:
-
-```bash
-VAULT_ADDR="http://localhost:8200"     # Vault server address
-VAULT_TOKEN="dev-token"                # Vault authentication token
-VAULT_MOUNT_PATH="transit"             # Transit secrets engine mount path (optional, defaults to "transit")
-```
-
-### Vault Agent Sidecar Mode (Kubernetes - Recommended for Production)
-
-For Kubernetes deployments, use the Vault Agent sidecar pattern for enhanced security:
-
-```bash
-VAULT_ADDR="http://127.0.0.1:8100"     # Local Vault Agent proxy
-VAULT_AGENT_MODE="true"                # Enable agent mode (no VAULT_TOKEN needed!)
-VAULT_MOUNT_PATH="transit"             # Transit secrets engine mount path (optional)
-```
-
-**Benefits:**
-- ✅ No long-lived secrets in pods
-- ✅ Automatic token rotation (e.g., TTL 1h)
-- ✅ ServiceAccount-based authentication
-- ✅ Reduced attack surface
-
-For complete Kubernetes setup with Vault Agent sidecar, see the [Vault Integration Guide](VAULT_INTEGRATION.md).
-
-The `StorageBuilder` automatically detects Vault configuration from environment variables.
-
-For comprehensive architecture documentation, see [Technical Documentation](doc/documentation.en.md).
-
-
-## 📋 Examples
-
-### AWS KMS Examples
-
-**IOTA KMS Demo (Complete workflow)**
-```bash
-AWS_REGION=eu-west-1 AWS_PROFILE=your-profile cargo run --package storage-factory --example iota_kms_demo
-```
-
-### HashiCorp Vault Examples
-
-**IOTA Vault Demo (Complete workflow)**
-```bash
-VAULT_ADDR=http://localhost:8200 VAULT_TOKEN=dev-token VAULT_MOUNT_PATH="transit" cargo run --package storage-factory --example iota_vault_demo
-```
-
-**Basic Vault Usage**
-```bash
-VAULT_ADDR=http://localhost:8200 VAULT_TOKEN=dev-token VAULT_MOUNT_PATH="transit" cargo run --package vault-adapter --example basic_usage
-```
-
-**Vault Agent Sidecar Mode (Kubernetes)**
-```bash
-VAULT_ADDR=http://127.0.0.1:8100 VAULT_AGENT_MODE=true cargo run --package vault-adapter --example vault_agent_mode
-```
-
-## 🔍 Implemented Features
-
-### ✅ Core Traits
-- [x] `KeyGenerate` - Generate new key pairs
-- [x] `KeySign` - Sign data with stored keys
-- [x] `KeyDelete` - Delete keys (schedule deletion for AWS KMS)
-- [x] `KeyExist` - Check key existence
-- [x] `KeyGet` - Retrieve public keys
-- [x] `Signer` - Low-level signing interface
-
-### ✅ AWS KMS Adapter
-- [x] Environment-based configuration
-- [x] Key generation with ECC_NIST_P256 (default)
-- [x] ECDSA_SHA_256 signatures
-- [x] Key existence checking
-- [x] Public key retrieval
-- [x] Scheduled key deletion
-- [x] IAM integration
-- [x] CloudTrail audit support
-
-### ✅ HashiCorp Vault Adapter
-- [x] Environment-based configuration
-- [x] Key generation with ECDSA P-256 (secp256r1)
-- [x] ECDSA signatures with Transit secrets engine
-- [x] Key existence checking
-- [x] Public key retrieval in DER format
-- [x] Key deletion with proper policies
-- [x] Docker containerization for local testing
-- [x] IOTA testnet transaction support
-- [x] Vault Agent sidecar mode for Kubernetes
-- [x] ServiceAccount-based authentication
-- [x] Automatic token rotation support
-
-### ✅ Builder Pattern
-- [x] Auto-detection of available adapters
-- [x] Manual adapter configuration
-- [x] Environment-based selection
-- [x] Extensible for future adapters
-
-### ✅ Testing Infrastructure
-- [x] Unit tests for all components
-- [x] Integration tests with AWS KMS
-- [x] LocalStack support for local testing
-- [x] Mock implementations for development
-
-## 🔮 Future Adapters
-
-The architecture supports additional adapters:
-
-- **File System Storage** - For development and testing
-- **DFNS Service** - Multi-party computation
-- **Azure Key Vault** - Microsoft cloud HSM
-- **Google Cloud KMS** - Google cloud key management
-- **Hardware Security Modules** - Direct HSM integration
-
-## 🔒 Security Considerations
-
-- **Private keys never leave secure environments** (KMS, HSM, enclaves)
-- **Minimum required permissions** via IAM policies
-- **Audit logging** through CloudTrail
-- **Environment variable validation**
-- **Secure error handling** without key material exposure
-
-## 💼 Enterprise Features
-
-### Enclave Principle
-The interfaces are designed with the assumption that private keys cannot be generated or stored outside secure enclaves.
-
-### Least Privilege Principle
-The system provides atomic 'permissions' such as `KeyRead`, `KeySign`, etc., allowing only the features actually used by the application.
-
-### Explicit Boundaries Principle
-Clear interface definitions separate provider code from user code, emphasizing responsibility boundaries.
-
-## 🤝 Contributing
-
-1. Follow the hexagonal architecture principles
-2. All comments must be in English
-3. Implement comprehensive tests for new adapters
-4. Update documentation for new features
-5. Follow existing code style and conventions
-
-## 📜 License
-
-Apache-2.0
-
-## 🏢 Enterprise Roadmap
-
-- **Multi-tenancy support** (planned)
-- **Key rotation mechanisms** (planned)  
-- **Compliance reporting** (planned)
-- **Performance monitoring** (planned)
-- **Policy engines** (planned)
-
----
-
-## 📚 Additional Documentation
-
-- [AWS Setup Guide](AWS_INTEGRATION.md) - Complete AWS KMS configuration instructions
-- [Vault Integration Guide](VAULT_INTEGRATION.md) - Complete HashiCorp Vault setup and integration (includes Kubernetes deployment)
-- [Technical Documentation](doc/documentation.en.md) - Hexagonal architecture and adapter details
+Distributed under the Apache License. See LICENSE for more information.
