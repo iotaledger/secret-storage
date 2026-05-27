@@ -27,6 +27,7 @@ pub struct AwsKmsKeyOptions {
 }
 
 /// AWS KMS storage implementation
+#[derive(Clone)]
 pub struct AwsKmsStorage {
   pub client: KmsClient,
   #[allow(dead_code)]

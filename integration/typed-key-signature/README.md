@@ -16,4 +16,5 @@ A `SignatureScheme` implementation that carries key type metadata alongside the 
 
 - [secret-storage](../../core/secret-storage) - core traits
 - [aws-kms-adapter](../../adapters/aws-kms-adapter) - implements the traits for AWS KMS
-- [typed-key-signature-to-iota](../typed-key-signature-to-iota) - bridges to the IOTA identity SDK
+- [typed-key-signer-storage-iota-adapter](../typed-key-signer-storage-iota-adapter) - bridges signers to the IOTA transaction signing interface
+- [typed-key-jwk-storage-iota-adapter](../typed-key-jwk-storage-iota-adapter) - bridges storage to the IOTA identity SDK's `JwkStorage`

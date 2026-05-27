@@ -129,7 +129,8 @@ async fn using_signer(
 
 - [core/secret-storage](core/secret-storage) - core traits and types
 - [integration/typed-key-signature](integration/typed-key-signature) - key-type-tagged signature scheme
-- [integration/typed-key-signature-to-iota](integration/typed-key-signature-to-iota) - bridge to the IOTA identity SDK
+- [integration/typed-key-signer-storage-iota-adapter](integration/typed-key-signer-storage-iota-adapter) - bridges typed-key-signature signers to the IOTA transaction signing interface
+- [integration/typed-key-jwk-storage-iota-adapter](integration/typed-key-jwk-storage-iota-adapter) - bridges typed-key-signature storage to the IOTA identity SDK's `JwkStorage`
 - [adapters/aws-kms-adapter](adapters/aws-kms-adapter) - AWS Key Management Service adapter
 
 ## Contributing

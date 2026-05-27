@@ -6,12 +6,14 @@ members = [
     "adapters/vault-adapter",
     "applications/storage-factory",
     "integration/typed-key-signature",
-    "integration/typed-key-signature-to-iota",
+    "integration/typed-key-signer-storage-iota-adapter",
+    "integration/typed-key-jwk-storage-iota-adapter",
 ]
 
 exclude = [
     "adapters/aws-kms-adapter/bindings/wasm/aws-kms-adapter-wasm",
-    "integration/typed-key-signature-to-iota/bindings/wasm/typed_key_signature_to_iota_wasm",
+    "integration/typed-key-signer-storage-iota-adapter/bindings/wasm/typed_key_signer_storage_iota_adapter_wasm",
+    "integration/typed-key-jwk-storage-iota-adapter/bindings/wasm/typed_key_jwk_storage_iota_adapter_wasm",
     "applications/hv-iota-e2e-test",
 ]
 
@@ -29,5 +31,8 @@ aws-kms-adapter = { path = "adapters/aws-kms-adapter", package = "aws-kms-adapte
 [patch."https://tbd-github.com/iotaledger/typed-key-signature.git"]
 typed-key-signature = { path = "integration/typed-key-signature" }
 
-[patch."https://tbd-github.com/iotaledger/typed-key-signature-to-iota.git"]
-typed-key-signature-to-iota = { path = "integration/typed-key-signature-to-iota" }
+[patch."https://tbd-github.com/iotaledger/typed-key-signer-storage-iota-adapter.git"]
+typed-key-signer-storage-iota-adapter = { path = "integration/typed-key-signer-storage-iota-adapter" }
+
+[patch."https://tbd-github.com/iotaledger/typed-key-jwk-storage-iota-adapter.git"]
+typed-key-jwk-storage-iota-adapter = { path = "integration/typed-key-jwk-storage-iota-adapter" }

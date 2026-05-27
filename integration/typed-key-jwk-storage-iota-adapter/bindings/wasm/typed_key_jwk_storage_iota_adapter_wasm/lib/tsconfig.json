@@ -1,0 +1,18 @@
+{
+  "extends": "../tsconfig.node.json",
+  "compilerOptions": {
+    "ignoreDeprecations": "6.0",
+    "baseUrl": "./",
+    "paths": {
+      "~typed_key_jwk_storage_iota_adapter_wasm": [
+        "../node/typed_key_jwk_storage_iota_adapter_wasm",
+        "./typed_key_jwk_storage_iota_adapter_wasm.js"
+      ],
+      "../lib": [
+        "."
+      ]
+    },
+    "outDir": "../node",
+    "declarationDir": "../node"
+  }
+}

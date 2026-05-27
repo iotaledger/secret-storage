@@ -1,0 +1,43 @@
+{
+  "name": "@iota/typed-key-jwk-storage-iota-adapter-wasm",
+  "version": "0.0.1",
+  "author": "IOTA Foundation <info@iota.org>",
+  "description": "",
+  "homepage": "https://www.iota.org",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iotaledger/secret-storage"
+  },
+  "directories": {
+    "example": "examples"
+  },
+  "scripts": {
+    "build:src": "cargo build --lib --release --target wasm32-unknown-unknown --target-dir ../target",
+    "prebundle:nodejs": "rm -rf node",
+    "bundle:nodejs": "wasm-bindgen ../target/wasm32-unknown-unknown/release/typed_key_jwk_storage_iota_adapter_wasm.wasm --typescript --weak-refs --target nodejs --out-dir node && node ../build/node typed_key_jwk_storage_iota_adapter_wasm && tsc --project ./lib/tsconfig.json && node ../build/replace_paths ./lib/tsconfig.json node typed_key_jwk_storage_iota_adapter_wasm",
+    "build:nodejs": "npm run build:src && npm run bundle:nodejs && wasm-opt -O node/typed_key_jwk_storage_iota_adapter_wasm_bg.wasm -o node/typed_key_jwk_storage_iota_adapter_wasm_bg.wasm",
+    "build": "npm run build:nodejs",
+    "fmt": "dprint fmt"
+  },
+  "bugs": {
+    "url": "https://github.com/iotaledger/secret-storage/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "node/*"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.1.0",
+    "wasm-opt": "^1.4.0"
+  },
+  "peerDependencies": {},
+  "engines": {
+    "node": ">=20"
+  }
+}
