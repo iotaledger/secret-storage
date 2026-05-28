@@ -36,9 +36,6 @@ aws_secret_access_key = YOUR_SECRET_ACCESS_KEY_HERE
 # Test AWS profile
 aws sts get-caller-identity --profile developer
 
-# Run IOTA examples
-AWS_PROFILE=developer AWS_REGION=eu-west-1 cargo run --package storage-factory --example iota_kms_demo
-AWS_PROFILE=developer AWS_REGION=eu-west-1 cargo run --package storage-factory --example iota_address_faucet_demo
 ```
 
 ## Configuration Explained
@@ -161,14 +158,6 @@ region = eu-west-1
 mfa_serial = arn:aws:iam::BASE-ACCOUNT-ID:mfa/your-username
 ```
 
-**Usage**:
-```bash
-# Development environment
-AWS_PROFILE=dev AWS_REGION=eu-west-1 cargo run --package storage-factory --example iota_kms_demo
-
-# Production environment (with MFA)
-AWS_PROFILE=prod AWS_REGION=eu-west-1 cargo run --package storage-factory --example iota_kms_demo
-```
 
 ### Container Environments
 For ECS, EKS, or EC2 with IAM roles, only set:
@@ -231,12 +220,6 @@ aws kms list-keys --region eu-west-1 --profile developer
 
 ### 2. IOTA Secret Storage Tests
 ```bash
-# Complete IOTA workflow with dynamic key generation and auto-faucet
-AWS_PROFILE=developer AWS_REGION=eu-west-1 cargo run --package storage-factory --example iota_kms_demo
-
-# IOTA address generation and faucet funding
-AWS_PROFILE=developer AWS_REGION=eu-west-1 cargo run --package storage-factory --example iota_address_faucet_demo
-
 # AWS KMS key deletion demonstration
 AWS_PROFILE=developer cargo run --package aws-kms-adapter --example key_deletion_demo
 
