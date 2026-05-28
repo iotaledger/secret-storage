@@ -14,6 +14,10 @@ const jwkStorage = new IotaCompatibleJwkStorage(awsStorage);
 
 `IotaCompatibleJwkStorage` implements `JwkStorage` and can be passed directly to the IOTA identity SDK.
 
+## Examples
+
+See the [AWS KMS adapter integration examples](../../../../../../adapters/aws-kms-adapter/bindings/wasm/aws_kms_adapter_wasm/examples/src/1_integration) for examples that show this package in use.
+
 ## Build
 
 ```sh
