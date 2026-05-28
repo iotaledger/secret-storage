@@ -11,7 +11,6 @@ path = "src/lib.rs"
 [dependencies]
 anyhow = "1"
 aws-kms-adapter = { path = "../" }
-chrono = { version = "0.4", features = ["serde"] }
 hex = "0.4"
 identity_ecdsa_verifier = { git = "https://github.com/iotaledger/identity.git" }
 identity_eddsa_verifier = { git = "https://github.com/iotaledger/identity.git", default-features = false, features = ["ed25519"] }
