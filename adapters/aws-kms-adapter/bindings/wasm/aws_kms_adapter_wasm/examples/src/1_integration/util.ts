@@ -22,10 +22,10 @@ import {
 } from "@iota/identity-wasm/node";
 import { getFullnodeUrl, IotaClient } from "@iota/iota-sdk/client";
 import { getFaucetHost, requestIotaFromFaucetV0 } from "@iota/iota-sdk/faucet";
-import { AwsKmsStorage } from "@iota/aws_kms_adapter_wasm/node/aws_kms_adapter_wasm";
-import type { KeyType } from "@iota/aws_kms_adapter_wasm/node/aws_kms_adapter_wasm";
-import { IotaCompatibleJwkStorage, type PublicJwk } from "@iota/typed-key-jwk-storage-iota-adapter-wasm/node/typed_key_jwk_storage_iota_adapter_wasm";
-import { IotaCompatibleSigner } from "@iota/typed-key-signer-storage-iota-adapter-wasm/node/typed_key_signer_storage_iota_adapter_wasm";
+import { AwsKmsStorage } from "@iota/aws_kms_adapter_wasm/node";
+import type { KeyType } from "@iota/aws_kms_adapter_wasm/node";
+import { IotaCompatibleJwkStorage, type PublicJwk } from "@iota/typed-key-jwk-storage-iota-adapter-wasm/node";
+import { IotaCompatibleSigner } from "@iota/typed-key-signer-storage-iota-adapter-wasm/node";
 
 export const IOTA_IDENTITY_PKG_ID = globalThis?.process?.env?.IOTA_IDENTITY_PKG_ID
     ?? (() => { throw new Error("Missing required environment variable: IOTA_IDENTITY_PKG_ID"); })();

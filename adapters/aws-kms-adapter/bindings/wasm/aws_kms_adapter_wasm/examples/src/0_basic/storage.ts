@@ -1,7 +1,7 @@
 // Copyright 2020-2025 IOTA Stiftung
 // SPDX-License-Identifier: Apache-2.0
 
-import { AwsKmsStorage } from "@iota/aws_kms_adapter_wasm/node/aws_kms_adapter_wasm";
+import { AwsKmsStorage } from "@iota/aws_kms_adapter_wasm/node";
 
 const ACCESS_KEY = process.env.ACCESS_KEY || "foo";
 const SECRET_ACCESS_KEY = process.env.SECRET_ACCESS_KEY || "bar";
