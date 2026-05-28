@@ -146,7 +146,7 @@ The application layer **combines adapters** and provides **high-level business w
 ### Storage Factory (`applications/storage-factory/`)
 **Explicit adapter selection with builder pattern**:
 - ✅ **Builder pattern**: Type-safe adapter configuration with dedicated build methods
-- ✅ **Explicit selection**: Clear `build_aws_kms()`, `build_vault()`, etc. methods
+- ✅ **Explicit selection**: Clear `build_aws_kms()` and other type-safe build methods
 - ✅ **Multi-auth support**: Automatic detection of AWS Profile vs. direct credentials
 - ✅ **Environment configuration**: Region, key ID, and other adapter-specific settings
 

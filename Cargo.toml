@@ -4,8 +4,6 @@ members = [
     "core/secret-storage",
     "adapters/aws-kms-adapter",
     "adapters/aws-kms-adapter/examples",
-    "adapters/vault-adapter",
-    "applications/storage-factory",
     "integration/typed-key-signature",
     "integration/typed-key-signer-storage-iota-adapter",
     "integration/typed-key-jwk-storage-iota-adapter",
@@ -15,7 +13,6 @@ exclude = [
     "adapters/aws-kms-adapter/bindings/wasm/aws-kms-adapter-wasm",
     "integration/typed-key-signer-storage-iota-adapter/bindings/wasm/typed_key_signer_storage_iota_adapter_wasm",
     "integration/typed-key-jwk-storage-iota-adapter/bindings/wasm/typed_key_jwk_storage_iota_adapter_wasm",
-    "applications/hv-iota-e2e-test",
 ]
 
 [workspace.dependencies]
