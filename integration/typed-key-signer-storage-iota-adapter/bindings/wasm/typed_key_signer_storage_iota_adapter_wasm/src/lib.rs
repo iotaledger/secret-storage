@@ -5,12 +5,5 @@ mod error;
 mod utils;
 mod wasm;
 
-use wasm_bindgen::prelude::*;
-
 pub use wasm::export::key_storage::*;
 pub use wasm::export::transaction_signer::*;
-
-#[wasm_bindgen]
-pub fn greet(name: String) -> String {
-    format!("Hello, {name}!")
-}
