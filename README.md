@@ -127,11 +127,13 @@ async fn using_signer(
 
 ## Crates
 
-- [core/secret-storage](core/secret-storage) - core traits and types
-- [integration/typed-key-signature](integration/typed-key-signature) - key-type-tagged signature scheme
-- [integration/typed-key-signer-storage-iota-adapter](integration/typed-key-signer-storage-iota-adapter) - bridges typed-key-signature signers to the IOTA transaction signing interface
-- [integration/typed-key-jwk-storage-iota-adapter](integration/typed-key-jwk-storage-iota-adapter) - bridges typed-key-signature storage to the IOTA identity SDK's `JwkStorage`
-- [adapters/aws-kms-adapter](adapters/aws-kms-adapter) - AWS Key Management Service adapter
+| Crate | Layer | Description | npm (WASM) |
+|---|---|---|---|
+| [secret-storage](core/secret-storage) | Core | Trait definitions: key generation, signing, deletion, existence check, and retrieval | — |
+| [typed-key-signature](integration/typed-key-signature) | Integration | Key-type-tagged signature scheme; associates public key and signature types with a `KeyType` discriminant | — |
+| [typed-key-signer-storage-iota-adapter](integration/typed-key-signer-storage-iota-adapter) | Integration | Bridges typed-key-signature signers to the IOTA transaction signing interface (`IotaCompatibleSigner`) | `@iota/typed-key-signer-storage-iota-adapter-wasm` |
+| [typed-key-jwk-storage-iota-adapter](integration/typed-key-jwk-storage-iota-adapter) | Integration | Bridges typed-key-signature key storage to the IOTA identity SDK's `JwkStorage` (`IotaCompatibleJwkStorage`) | `@iota/typed-key-jwk-storage-iota-adapter-wasm` |
+| [aws-kms-adapter](adapters/aws-kms-adapter) | Adapter | AWS Key Management Service backend implementing the secret-storage traits | `@iota/aws_kms_adapter_wasm` |
 
 ## Contributing
 
