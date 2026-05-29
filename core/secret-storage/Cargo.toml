@@ -18,5 +18,4 @@ async-trait = "0.1"
 
 [features]
 default = ["send-sync-storage"]
-signature-scheme-raw = []
 send-sync-storage = []
