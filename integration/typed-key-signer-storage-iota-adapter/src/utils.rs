@@ -1,3 +1,6 @@
+// Copyright 2020-2026 IOTA Stiftung
+// SPDX-License-Identifier: Apache-2.0
+
 use std::error::Error;
 
 use iota_interaction::types::crypto::SignatureScheme as IotaSignatureScheme;

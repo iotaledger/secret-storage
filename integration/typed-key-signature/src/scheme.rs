@@ -1,3 +1,6 @@
+// Copyright 2020-2026 IOTA Stiftung
+// SPDX-License-Identifier: Apache-2.0
+
 use secret_storage::SignatureScheme;
 
 use crate::TypedKeySignaturePublicKey;
