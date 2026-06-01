@@ -6,26 +6,22 @@
 //! Usage:
 //! ```
 //! AWS_PROFILE=<profile> AWS_REGION=<region> cargo run --example signing_demo
-//! AWS_ACCESS_KEY_ID=<key> AWS_SECRET_ACCESS_KEY=<secret> AWS_REGION=<region> cargo run --example signing_demo
 //! ```
 
 use aws_kms_adapter::AwsKmsKeyOptions;
-use aws_kms_adapter::AwsKmsStorage;
 use aws_kms_adapter::KeySpec;
+use examples::create_storage;
 use secret_storage::KeyGenerate;
 use secret_storage::KeyGet;
+use secret_storage::KeySignWithOptions;
 use secret_storage::Signer;
 use typed_key_signature::KeyType;
-use std::env;
+use typed_key_signature::TypedKeySignaturePublicKey;
+use typed_key_signature::TypedKeySignatureSignature;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let base = if let Some(profile) = env::var("AWS_PROFILE").ok() {
-        AwsKmsStorage::from_profile(Some(&profile)).await?
-    } else {
-        AwsKmsStorage::from_env().await?
-    };
-    let storage = base.with_key_options(AwsKmsKeyOptions {
+    let storage = create_storage().await?.with_key_options(AwsKmsKeyOptions {
         description: Some("IOTA Demo - secp256r1 signing key".to_string()),
         policy: None,
         tags: vec![
@@ -49,7 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (i, message) in messages.iter().enumerate() {
-        let signature = signer.sign(message).await?;
+        let signature: TypedKeySignatureSignature = signer.sign(message).await?;
         let sig_bytes = signature.bytes();
         println!(
             "Message #{} ({} bytes) => {} byte signature ({}...)",
@@ -60,7 +56,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
-    let signer_pk = signer.public_key().await?;
+    let signer_pk: TypedKeySignaturePublicKey = signer.public_key().await?;
     let storage_pk = storage.public_key(&key_id).await?;
     if signer_pk.bytes() != storage_pk.bytes() {
         return Err("Public key mismatch between signer and storage".into());

@@ -9,26 +9,19 @@
 //! Usage:
 //! ```
 //! AWS_PROFILE=<profile> AWS_REGION=<region> cargo run --example key_deletion_demo
-//! AWS_ACCESS_KEY_ID=<key> AWS_SECRET_ACCESS_KEY=<secret> AWS_REGION=<region> cargo run --example key_deletion_demo
 //! ```
 
 use aws_kms_adapter::AwsKmsKeyOptions;
-use aws_kms_adapter::AwsKmsStorage;
 use aws_kms_adapter::KeySpec;
+use examples::create_storage;
 use secret_storage::KeyDelete;
 use secret_storage::KeyExist;
 use secret_storage::KeyGenerate;
 use typed_key_signature::KeyType;
-use std::env;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let base = if let Some(profile) = env::var("AWS_PROFILE").ok() {
-        AwsKmsStorage::from_profile(Some(&profile)).await?
-    } else {
-        AwsKmsStorage::from_env().await?
-    };
-    let storage = base.with_key_options(AwsKmsKeyOptions {
+    let storage = create_storage().await?.with_key_options(AwsKmsKeyOptions {
         description: Some("Test key for deletion demo".to_string()),
         policy: None,
         tags: vec![("Purpose".to_string(), "DeletionDemo".to_string())],
