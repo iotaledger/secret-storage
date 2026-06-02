@@ -4,8 +4,8 @@
 use std::error::Error;
 
 use iota_interaction::types::crypto::SignatureScheme as IotaSignatureScheme;
-use typed_key_signature::KeyType;
 use pkcs8::DecodePublicKey as _;
+use typed_key_signature::KeyType;
 
 use iota_interaction::IotaKeySignature;
 use secret_storage::SignatureScheme;
@@ -35,20 +35,14 @@ pub fn convert_public_key_der_to_iota_public_key(
         KeyType::Secp256r1DerEncoded => {
             let decoded = p256::PublicKey::from_public_key_der(public_key_der).unwrap();
             let sec1_bytes = decoded.to_sec1_bytes();
-            IotaKeySignaturePublicKey::try_from_bytes(
-                IotaSignatureScheme::Secp256r1,
-                &sec1_bytes,
-            )
-            .unwrap()
+            IotaKeySignaturePublicKey::try_from_bytes(IotaSignatureScheme::Secp256r1, &sec1_bytes)
+                .unwrap()
         }
         KeyType::Secp256k1DerEncoded => {
             let decoded = k256::PublicKey::from_public_key_der(public_key_der).unwrap();
             let sec1_bytes = decoded.to_sec1_bytes();
-            IotaKeySignaturePublicKey::try_from_bytes(
-                IotaSignatureScheme::Secp256k1,
-                &sec1_bytes,
-            )
-            .unwrap()
+            IotaKeySignaturePublicKey::try_from_bytes(IotaSignatureScheme::Secp256k1, &sec1_bytes)
+                .unwrap()
         }
         other => panic!("unsupported public key type {other}"),
     };

@@ -8,21 +8,21 @@ use blake2::Blake2b;
 use blake2::Digest;
 use fastcrypto::traits::ToFromBytes;
 use iota_interaction::OptionalSync;
-use iota_sdk_types::Intent;
-use iota_sdk_types::IntentMessage;
 use iota_interaction::types::crypto::Ed25519IotaSignature;
 use iota_interaction::types::crypto::IotaSignatureInner as _;
 use iota_interaction::types::crypto::Secp256k1IotaSignature;
 use iota_interaction::types::crypto::Secp256r1IotaSignature;
-use typed_key_signature::TypedKeySignature;
+use iota_sdk_types::Intent;
+use iota_sdk_types::IntentMessage;
 use secret_storage::Signer;
+use typed_key_signature::TypedKeySignature;
 
-use iota_interaction::IotaKeySignature;
 use crate::signer::IotaCompatibleSigner;
 use crate::utils::IotaKeySignatureInput;
 use crate::utils::IotaKeySignaturePublicKey;
 use crate::utils::IotaKeySignatureSignature;
 use crate::utils::convert_public_key_der_to_iota_public_key;
+use iota_interaction::IotaKeySignature;
 
 type Blake2b256 = Blake2b<typenum::U32>;
 
@@ -53,8 +53,7 @@ where
         // build IOTA signature with public key
         let public_key_iota = Signer::<IotaKeySignature>::public_key(self).await?;
         let iota_signature_bytes = to_iota_signature(signature.bytes(), &public_key_iota).unwrap();
-        let iota_signature =
-            IotaKeySignatureSignature::from_bytes(&iota_signature_bytes).unwrap();
+        let iota_signature = IotaKeySignatureSignature::from_bytes(&iota_signature_bytes).unwrap();
 
         Ok(iota_signature)
     }

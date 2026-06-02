@@ -15,7 +15,7 @@
 //!
 //! # Environment Variables
 //! - `AWS_ACCESS_KEY_ID`: AWS access key
-//! - `AWS_SECRET_ACCESS_KEY`: AWS secret key  
+//! - `AWS_SECRET_ACCESS_KEY`: AWS secret key
 //! - `AWS_REGION`: AWS region
 //! - `KMS_KEY_ID`: Optional, for using existing keys
 

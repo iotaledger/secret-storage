@@ -3,10 +3,10 @@
 
 use aws_sdk_kms::types::KeySpec as AwsKeySpec;
 use aws_sdk_kms::types::SigningAlgorithmSpec as AwsSigningAlgorithmSpec;
-use typed_key_signature::KeyType;
 use serde::Deserialize;
 use serde::Serialize;
 use std::str::FromStr;
+use typed_key_signature::KeyType;
 
 use crate::error::AwsKmsError;
 use crate::AwsKmsKeyOptions;

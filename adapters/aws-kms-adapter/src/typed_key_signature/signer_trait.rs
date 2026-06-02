@@ -5,11 +5,11 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use aws_sdk_kms::types::SigningAlgorithmSpec;
 use k256::ecdsa::Signature as K256Signature;
+use p256::ecdsa::Signature as P256Signature;
+use secret_storage::Signer;
 use typed_key_signature::TypedKeySignature;
 use typed_key_signature::TypedKeySignaturePublicKey;
 use typed_key_signature::TypedKeySignatureSignature;
-use p256::ecdsa::Signature as P256Signature;
-use secret_storage::Signer;
 
 use crate::key_utils::get_public_key_der;
 use crate::AwsKmsSigner;
@@ -51,18 +51,12 @@ impl Signer<TypedKeySignature> for AwsKmsSigner {
     let signature = match self.key_spec {
       KeySpec::EccNistP256 => P256Signature::from_der(&signature)
         .map_err(|e| {
-          secret_storage::Error::Other(anyhow!(
-            "Failed to parse P256Signature from AWS KMS response; {}",
-            e,
-          ))
+          secret_storage::Error::Other(anyhow!("Failed to parse P256Signature from AWS KMS response; {}", e,))
         })?
         .to_vec(),
       KeySpec::EccSecgP256K1 => K256Signature::from_der(&signature)
         .map_err(|e| {
-          secret_storage::Error::Other(anyhow!(
-            "Failed to parse K256Signature from AWS KMS response; {}",
-            e,
-          ))
+          secret_storage::Error::Other(anyhow!("Failed to parse K256Signature from AWS KMS response; {}", e,))
         })?
         .to_vec(),
       _ => signature,

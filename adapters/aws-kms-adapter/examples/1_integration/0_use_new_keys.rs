@@ -10,8 +10,8 @@ use examples::run_example_for_key_config;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let key_config = key_config_from_env();
-    run_example_for_key_config(&key_config).await?;
+  let key_config = key_config_from_env();
+  run_example_for_key_config(&key_config).await?;
 
-    Ok(())
+  Ok(())
 }

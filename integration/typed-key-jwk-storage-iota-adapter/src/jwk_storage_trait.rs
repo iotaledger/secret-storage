@@ -16,14 +16,14 @@ use identity_iota::verification::jwk::ToJwk;
 use identity_iota::verification::jws::JwsAlgorithm;
 use iota_interaction::OptionalSend;
 use iota_interaction::OptionalSync;
-use typed_key_signature::KeyType as TypedKeySignatureKeyType;
-use typed_key_signature::TypedKeySignature;
 use secret_storage::KeyDelete;
 use secret_storage::KeyExist;
 use secret_storage::KeyGenerate;
 use secret_storage::KeyGet;
 use secret_storage::KeySignWithOptions;
 use secret_storage::Signer;
+use typed_key_signature::KeyType as TypedKeySignatureKeyType;
+use typed_key_signature::TypedKeySignature;
 use typed_key_signer_storage_iota_adapter::convert_public_key_der_to_iota_public_key;
 
 use crate::storage::IotaCompatibleJwkStorage;
@@ -75,7 +75,8 @@ where
                 })?;
 
         let mut jwk = ToJwk::to_jwk(&public_key_iota).map_err(|e| {
-            KeyStorageError::new(KeyStorageErrorKind::Unspecified).with_custom_message(e.to_string())
+            KeyStorageError::new(KeyStorageErrorKind::Unspecified)
+                .with_custom_message(e.to_string())
         })?;
         jwk.set_kid(jwk.thumbprint_sha256_b64());
 
@@ -119,26 +120,25 @@ where
                     .with_custom_message(e.to_string())
             })?;
 
-        let signature = inner_signer
-            .sign(&data.to_vec())
-            .await
-            .map_err(|e| {
-                KeyStorageError::new(KeyStorageErrorKind::Unspecified)
-                    .with_custom_message(e.to_string())
-            })?;
+        let signature = inner_signer.sign(&data.to_vec()).await.map_err(|e| {
+            KeyStorageError::new(KeyStorageErrorKind::Unspecified)
+                .with_custom_message(e.to_string())
+        })?;
 
         Ok(signature.bytes().clone())
     }
 
     async fn delete(&self, key_id: &KeyId) -> KeyStorageResult<()> {
         self.0.delete(&key_id.to_string()).await.map_err(|e| {
-            KeyStorageError::new(KeyStorageErrorKind::Unspecified).with_custom_message(e.to_string())
+            KeyStorageError::new(KeyStorageErrorKind::Unspecified)
+                .with_custom_message(e.to_string())
         })
     }
 
     async fn exists(&self, key_id: &KeyId) -> KeyStorageResult<bool> {
         self.0.exist(&key_id.to_string()).await.map_err(|e| {
-            KeyStorageError::new(KeyStorageErrorKind::Unspecified).with_custom_message(e.to_string())
+            KeyStorageError::new(KeyStorageErrorKind::Unspecified)
+                .with_custom_message(e.to_string())
         })
     }
 }
@@ -148,14 +148,10 @@ where
     TInner: KeyGet<TypedKeySignature, String> + OptionalSync,
 {
     pub async fn public_key_jwk(&self, key_id: &str) -> KeyStorageResult<Jwk> {
-        let public_key = self
-            .0
-            .public_key(&key_id.to_owned())
-            .await
-            .map_err(|e| {
-                KeyStorageError::new(KeyStorageErrorKind::Unspecified)
-                    .with_custom_message(e.to_string())
-            })?;
+        let public_key = self.0.public_key(&key_id.to_owned()).await.map_err(|e| {
+            KeyStorageError::new(KeyStorageErrorKind::Unspecified)
+                .with_custom_message(e.to_string())
+        })?;
 
         let iota_public_key =
             convert_public_key_der_to_iota_public_key(public_key.bytes(), public_key.key_type())

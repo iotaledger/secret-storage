@@ -4,9 +4,6 @@
 use async_trait::async_trait;
 
 use aws_sdk_kms::types::KeyState;
-use typed_key_signature::KeyType;
-use typed_key_signature::TypedKeySignature;
-use typed_key_signature::TypedKeySignaturePublicKey;
 use secret_storage::KeyDelete;
 use secret_storage::KeyExist;
 use secret_storage::KeyGenerate;
@@ -14,6 +11,9 @@ use secret_storage::KeyGet;
 use secret_storage::KeySignWithOptions;
 use secret_storage::Result;
 use secret_storage::SignatureScheme as SecretStorageSignatureScheme;
+use typed_key_signature::KeyType;
+use typed_key_signature::TypedKeySignature;
+use typed_key_signature::TypedKeySignaturePublicKey;
 
 use crate::key_utils::get_public_key_der;
 use crate::AwsKmsSigner;
@@ -28,10 +28,7 @@ impl KeyGenerate<TypedKeySignature, String> for AwsKmsStorage {
   async fn generate_key_with_options(
     &self,
     options: KeyType,
-  ) -> Result<(
-    String,
-    <TypedKeySignature as SecretStorageSignatureScheme>::PublicKey,
-  )> {
+  ) -> Result<(String, <TypedKeySignature as SecretStorageSignatureScheme>::PublicKey)> {
     let key_spec: KeySpec = options.try_into()?;
 
     let (kms_key_id, public_key_der) = self.generate_key(key_spec).await?;

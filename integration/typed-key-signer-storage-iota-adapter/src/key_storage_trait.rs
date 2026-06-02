@@ -4,8 +4,6 @@
 use async_trait::async_trait;
 use iota_interaction::IotaKeySignature;
 use iota_interaction::OptionalSync;
-use typed_key_signature::KeyIdDefinition;
-use typed_key_signature::TypedKeySignature;
 use secret_storage::KeyDelete;
 use secret_storage::KeyExist;
 use secret_storage::KeyGenerate;
@@ -14,6 +12,8 @@ use secret_storage::KeySignWithOptions;
 use secret_storage::Result;
 use secret_storage::SignatureScheme as SecretStorageSignatureScheme;
 use secret_storage::Signer;
+use typed_key_signature::KeyIdDefinition;
+use typed_key_signature::TypedKeySignature;
 
 use crate::signer::IotaCompatibleSigner;
 use crate::storage::IotaCompatibleKeyStorage;
@@ -49,8 +49,7 @@ where
 
 impl<TInner> KeySignWithOptions<IotaKeySignature, String> for IotaCompatibleKeyStorage<TInner>
 where
-    TInner:
-        KeySignWithOptions<TypedKeySignature, TInner::KeyId> + KeyIdDefinition + OptionalSync,
+    TInner: KeySignWithOptions<TypedKeySignature, TInner::KeyId> + KeyIdDefinition + OptionalSync,
     <TInner as KeySignWithOptions<TypedKeySignature, TInner::KeyId>>::Signer:
         Signer<TypedKeySignature, KeyId = TInner::KeyId> + OptionalSync,
 {
@@ -64,10 +63,7 @@ where
     ) -> Result<Self::Signer> {
         let multi_signer = self
             .inner
-            .get_signer_with_options(
-                &to_inner_key_id::<TInner>(key_id)?,
-                options,
-            )
+            .get_signer_with_options(&to_inner_key_id::<TInner>(key_id)?, options)
             .unwrap();
         let iota_signer = IotaCompatibleSigner {
             inner: multi_signer,

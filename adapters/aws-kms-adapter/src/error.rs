@@ -36,9 +36,7 @@ impl From<AwsKmsError> for secret_storage::Error {
       AwsKmsError::UnsupportedKeyUsage(_) => secret_storage::Error::InvalidOptions,
       AwsKmsError::InvalidKeyFormat(e) => secret_storage::Error::Other(anyhow!(e)),
       AwsKmsError::InvalidSigningAlgorithmFormat(e) => secret_storage::Error::Other(anyhow!(e)),
-      AwsKmsError::MissingEnvVar(e) => {
-        secret_storage::Error::Other(anyhow!("Missing environment variable: {}", e))
-      }
+      AwsKmsError::MissingEnvVar(e) => secret_storage::Error::Other(anyhow!("Missing environment variable: {}", e)),
       AwsKmsError::General(e) => secret_storage::Error::Other(anyhow!(e)),
     }
   }
