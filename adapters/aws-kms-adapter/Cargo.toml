@@ -14,9 +14,9 @@ keywords = ["crypto", "aws", "kms", "storage", "keys"]
 anyhow = "1"
 async-trait = "0.1"
 k256 = { version = "0.13.3", default-features = false, features = ["std", "ecdsa", "ecdsa-core", "jwk"] }
-typed-key-signature = { git = "https://tbd-github.com/iotaledger/typed-key-signature.git", tag = "tbd", default-features = false }
+typed-key-signature = { path = "../../integration/typed-key-signature", default-features = false }
 p256 = { version = "0.13.2", default-features = false, features = ["std", "ecdsa", "ecdsa-core", "jwk", "arithmetic"] }
-secret-storage = { git = "https://github.com/iotaledger/secret-storage.git", tag = "v0.3.0", default-features = false }
+secret-storage = { path = "../../core/secret-storage", default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 strum = { version = "0.27", features = ["derive"] }
 thiserror = "2"

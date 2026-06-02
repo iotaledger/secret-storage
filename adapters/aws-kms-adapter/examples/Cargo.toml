@@ -12,16 +12,16 @@ path = "src/lib.rs"
 anyhow = "1"
 aws-kms-adapter = { path = "../" }
 hex = "0.4"
-identity_ecdsa_verifier = { git = "https://github.com/iotaledger/identity.git" }
-identity_eddsa_verifier = { git = "https://github.com/iotaledger/identity.git", default-features = false, features = ["ed25519"] }
-identity_storage = { git = "https://github.com/iotaledger/identity.git" }
-identity_stronghold = { git = "https://github.com/iotaledger/identity.git", default-features = false, features = ["send-sync-storage"] }
-iota-sdk = { git = "https://github.com/iotaledger/iota.git", package = "iota-sdk", tag = "v1.22.1" }
+identity_ecdsa_verifier = { git = "https://github.com/iotaledger/identity.git", tag = "v1.9.8-beta.1", default-features = false }
+identity_eddsa_verifier = { git = "https://github.com/iotaledger/identity.git", tag = "v1.9.8-beta.1", default-features = false, features = ["ed25519"] }
+identity_storage = { git = "https://github.com/iotaledger/identity.git", tag = "v1.9.8-beta.1", default-features = false  }
+identity_stronghold = { git = "https://github.com/iotaledger/identity.git", tag = "v1.9.8-beta.1", default-features = false, features = ["send-sync-storage"] }
+iota-sdk = { git = "https://github.com/iotaledger/iota.git", package = "iota-sdk", tag = "v1.23.2" }
 iota-sdk-legacy = { package = "iota-sdk", version = "1.0", default-features = false, features = ["tls", "client", "stronghold"] }
-notarization = { git = "https://github.com/iotaledger/notarization.git", tag = "v0.1.21", features = ["irl"] }
-product_common = { git = "https://github.com/iotaledger/product-core.git", tag = "v0.8.17", package = "product_common", features = ["core-client", "transaction"] }
+notarization = { git = "https://github.com/iotaledger/notarization.git", tag = "v0.1.22", features = ["irl"] }
+product_common = { git = "https://github.com/iotaledger/product-core.git", tag = "v0.8.18", package = "product_common", features = ["core-client", "transaction"] }
 rand = "0.8.5"
-secret-storage = { path = "../../../core/secret-storage" }
+secret-storage = { path = "../../../core/secret-storage", default-features = false }
 serde_json = { version = "1.0", default-features = false }
 tokio = { version = "1", default-features = false, features = ["rt", "macros"] }
 typed-key-jwk-storage-iota-adapter = { path = "../../../integration/typed-key-jwk-storage-iota-adapter" }
@@ -30,6 +30,7 @@ typed-key-signer-storage-iota-adapter = { path = "../../../integration/typed-key
 
 [dependencies.identity_iota]
 git = "https://github.com/iotaledger/identity.git"
+tag = "v1.9.8-beta.1"
 default-features = false
 features = [
   "domain-linkage",

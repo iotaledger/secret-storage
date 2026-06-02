@@ -21,36 +21,4 @@ thiserror = "2"
 async-trait = "0.1"
 
 [patch."https://github.com/iotaledger/secret-storage.git"]
-secret-storage = { path = "core/secret-storage", package = "secret-storage" }
-
-[patch."https://tbd-github.com/iotaledger/aws-kms-adapter.git"]
-aws-kms-adapter = { path = "adapters/aws-kms-adapter", package = "aws-kms-adapter" }
-
-[patch."https://tbd-github.com/iotaledger/typed-key-signature.git"]
-typed-key-signature = { path = "integration/typed-key-signature" }
-
-[patch."https://tbd-github.com/iotaledger/typed-key-signer-storage-iota-adapter.git"]
-typed-key-signer-storage-iota-adapter = { path = "integration/typed-key-signer-storage-iota-adapter" }
-
-[patch."https://tbd-github.com/iotaledger/typed-key-jwk-storage-iota-adapter.git"]
-typed-key-jwk-storage-iota-adapter = { path = "integration/typed-key-jwk-storage-iota-adapter" }
-
-[patch."https://github.com/iotaledger/identity.git"]
-identity_ecdsa_verifier = { path = "../product-reference/dependencies/identity/identity_ecdsa_verifier" }
-identity_eddsa_verifier = { path = "../product-reference/dependencies/identity/identity_eddsa_verifier" }
-identity_iota = { path = "../product-reference/dependencies/identity/identity_iota" }
-identity_pqc_verifier = { path = "../product-reference/dependencies/identity/identity_pqc_verifier" }
-identity_storage = { path = "../product-reference/dependencies/identity/identity_storage" }
-identity_stronghold = { path = "../product-reference/dependencies/identity/identity_stronghold" }
 secret-storage = { path = "core/secret-storage" }
-
-[patch."https://github.com/iotaledger/notarization.git"]
-notarization = { path = "../product-reference/dependencies/notarization/notarization-rs" }
-
-[patch."https://github.com/iotaledger/product-core.git"]
-iota-interaction = { path = "../product-core/iota_interaction", package = "iota_interaction" }
-iota-iota_interaction_rust = { path = "../product-core/iota_interaction_rust", package = "iota_interaction_rust" }
-product_common = { path = "../product-core/product_common", package = "product_common" }
-
-[patch."https://github.com/iotaledger/iota.git"]
-iota-sdk = { path = "../iota/crates/iota-sdk", package = "iota-sdk" }

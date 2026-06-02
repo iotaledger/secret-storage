@@ -9,7 +9,6 @@
       ]
     },
     "outDir": "../node",
-    "declarationDir": "../node",
-    "ignoreDeprecations": "6.0"
+    "declarationDir": "../node"
   }
 }
