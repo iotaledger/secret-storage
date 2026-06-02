@@ -12,7 +12,7 @@ path = "src/lib.rs"
 anyhow = "1"
 aws-kms-adapter = { path = "../" }
 hex = "0.4"
-identity_ecdsa_verifier = { git = "https://github.com/iotaledger/identity.git", tag = "v1.9.8-beta.1", default-features = false }
+identity_ecdsa_verifier = { git = "https://github.com/iotaledger/identity.git", tag = "v1.9.8-beta.1", default-features = false, features = ["es256", "es256k"] }
 identity_eddsa_verifier = { git = "https://github.com/iotaledger/identity.git", tag = "v1.9.8-beta.1", default-features = false, features = ["ed25519"] }
 identity_storage = { git = "https://github.com/iotaledger/identity.git", tag = "v1.9.8-beta.1", default-features = false  }
 identity_stronghold = { git = "https://github.com/iotaledger/identity.git", tag = "v1.9.8-beta.1", default-features = false, features = ["send-sync-storage"] }
