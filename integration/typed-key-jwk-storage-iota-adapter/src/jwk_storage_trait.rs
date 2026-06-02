@@ -68,7 +68,7 @@ where
             })?;
 
         let public_key_iota =
-            convert_public_key_der_to_iota_public_key(&public_key.bytes(), &public_key.key_type())
+            convert_public_key_der_to_iota_public_key(public_key.bytes(), public_key.key_type())
                 .map_err(|e| {
                     KeyStorageError::new(KeyStorageErrorKind::Unspecified)
                         .with_custom_message(e.to_string())
@@ -158,7 +158,7 @@ where
             })?;
 
         let iota_public_key =
-            convert_public_key_der_to_iota_public_key(&public_key.bytes(), &public_key.key_type())
+            convert_public_key_der_to_iota_public_key(public_key.bytes(), public_key.key_type())
                 .map_err(|e| {
                     KeyStorageError::new(KeyStorageErrorKind::Unspecified)
                         .with_custom_message(e.to_string())

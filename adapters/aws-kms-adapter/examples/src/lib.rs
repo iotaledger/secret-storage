@@ -102,7 +102,7 @@ where
         .generate_method(
             storage,
             IdentityStorageKeyType::from_static_str(key_spec.into()),
-            alg.clone(),
+            *alg,
             None,
             MethodScope::VerificationMethod,
         )
@@ -158,7 +158,7 @@ where
     // Insert the generated `KeyId` into storage under the computed method digest and handle the error if the
     // operation fails.
     <I as KeyIdStorage>::insert_key_id(
-        &storage.key_id_storage(),
+        storage.key_id_storage(),
         method_digest,
         KeyId::new(key_id),
     )
@@ -271,7 +271,7 @@ pub fn pretty_print_json(label: &str, value: &str) {
 }
 
 pub async fn create_storage() -> Result<AwsKmsStorage, Box<dyn std::error::Error>> {
-    let storage = if let Some(profile) = env::var("AWS_PROFILE").ok() {
+    let storage = if let Ok(profile) = env::var("AWS_PROFILE") {
         AwsKmsStorage::from_profile(Some(&profile)).await?
     } else {
         AwsKmsStorage::from_env().await?
@@ -380,7 +380,7 @@ pub async fn run_example_for_key_config(key_config: &KeyConfig) -> Result<(), an
                 IdentityStorageKeyType::from_static_str(key_spec_to_identity_key_type(
                     &key_config.tx_sign_key_spec,
                 )),
-                key_config.jws_algorithm.clone(),
+                key_config.jws_algorithm,
             )
             .await?;
         let tx_key_id = tx_key.key_id.to_string();
@@ -394,7 +394,7 @@ pub async fn run_example_for_key_config(key_config: &KeyConfig) -> Result<(), an
                 IdentityStorageKeyType::from_static_str(key_spec_to_identity_key_type(
                     &key_config.jwk_sign_key_spec,
                 )),
-                key_config.jws_algorithm.clone(),
+                key_config.jws_algorithm,
             )
             .await?;
         let jwk_key_id = jwk_key.key_id.to_string();

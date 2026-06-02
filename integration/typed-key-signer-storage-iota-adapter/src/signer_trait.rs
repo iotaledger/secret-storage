@@ -52,7 +52,7 @@ where
 
         // build IOTA signature with public key
         let public_key_iota = Signer::<IotaKeySignature>::public_key(self).await?;
-        let iota_signature_bytes = to_iota_signature(&signature.bytes(), &public_key_iota).unwrap();
+        let iota_signature_bytes = to_iota_signature(signature.bytes(), &public_key_iota).unwrap();
         let iota_signature =
             IotaKeySignatureSignature::from_bytes(&iota_signature_bytes).unwrap();
 
@@ -63,7 +63,7 @@ where
         let public_key = self.inner.public_key().await.unwrap();
 
         let public_key_iota =
-            convert_public_key_der_to_iota_public_key(&public_key.bytes(), &public_key.key_type())
+            convert_public_key_der_to_iota_public_key(public_key.bytes(), public_key.key_type())
                 .unwrap();
 
         Ok(public_key_iota)
@@ -101,7 +101,7 @@ pub fn to_iota_signature(
         return Err(format!("Unsupported public key scheme: {}", scheme).into());
     };
 
-    let sig_bytes = concat_signature(&public_key_iota, &r_bytes, &s_bytes);
+    let sig_bytes = concat_signature(public_key_iota, &r_bytes, &s_bytes);
 
     Ok(sig_bytes)
 }
@@ -225,8 +225,8 @@ pub fn concat_signature(
     s_32[32 - s_len..].copy_from_slice(&s_bytes[s_bytes.len() - s_len..]);
     s_32[32 - s_len..].copy_from_slice(&s_bytes[s_bytes.len() - s_len..]);
 
-    sig_bytes.extend_from_slice(&r_bytes);
-    sig_bytes.extend_from_slice(&s_bytes);
+    sig_bytes.extend_from_slice(r_bytes);
+    sig_bytes.extend_from_slice(s_bytes);
     sig_bytes.extend_from_slice(public_key_iota.as_ref());
 
     sig_bytes

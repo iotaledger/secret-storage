@@ -6,6 +6,7 @@ use serde::Serialize;
 
 #[non_exhaustive]
 #[derive(
+    Default,
     Serialize,
     Deserialize,
     Debug,
@@ -18,14 +19,9 @@ use serde::Serialize;
     strum::VariantNames,
 )]
 pub enum KeyType {
-    Secp256r1DerEncoded,
-    Secp256k1DerEncoded,
+    #[default]
     Ed25519DerEncoded,
+    Secp256k1DerEncoded,
+    Secp256r1DerEncoded,
     Custom(String),
-}
-
-impl Default for KeyType {
-    fn default() -> Self {
-        KeyType::Ed25519DerEncoded
-    }
 }

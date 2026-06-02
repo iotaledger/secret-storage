@@ -164,7 +164,7 @@ impl AwsKmsStorage {
     Ok(())
   }
 
-  pub(crate) fn get_signer_with_key_spec(&self, key_id: &String, key_spec: AdapterKeySpec) -> Result<AwsKmsSigner> {
-    Ok(AwsKmsSigner::new(self.client.clone(), key_id.clone(), key_spec))
+  pub(crate) fn get_signer_with_key_spec(&self, key_id: &str, key_spec: AdapterKeySpec) -> Result<AwsKmsSigner> {
+    Ok(AwsKmsSigner::new(self.client.clone(), key_id.to_owned(), key_spec))
   }
 }

@@ -38,8 +38,8 @@ where
             self.inner.generate_key_with_options(options).await.unwrap();
 
         let public_key_iota = convert_public_key_der_to_iota_public_key(
-            &public_key_multi.bytes(),
-            &public_key_multi.key_type(),
+            public_key_multi.bytes(),
+            public_key_multi.key_type(),
         )
         .unwrap();
 
@@ -66,9 +66,7 @@ where
             .inner
             .get_signer_with_options(
                 &to_inner_key_id::<TInner>(key_id)?,
-                options.try_into().map_err(|_| {
-                    secret_storage::Error::InvalidConfig("Failed to convert.".to_string())
-                })?,
+                options,
             )
             .unwrap();
         let iota_signer = IotaCompatibleSigner {
@@ -95,8 +93,8 @@ where
             .unwrap();
 
         let public_key_iota = convert_public_key_der_to_iota_public_key(
-            &public_key_multi.bytes(),
-            &public_key_multi.key_type().clone().try_into().unwrap(),
+            public_key_multi.bytes(),
+            public_key_multi.key_type(),
         )
         .unwrap();
 
@@ -127,11 +125,11 @@ where
     }
 }
 
-fn to_inner_key_id<T>(key_id: &String) -> secret_storage::Result<T::KeyId>
+fn to_inner_key_id<T>(key_id: &str) -> secret_storage::Result<T::KeyId>
 where
     T: KeyIdDefinition,
 {
-    key_id.clone().try_into().map_err(|_| {
+    key_id.to_owned().try_into().map_err(|_| {
         secret_storage::Error::InvalidConfig("Failed to parse inner key_id from input.".to_string())
     })
 }
