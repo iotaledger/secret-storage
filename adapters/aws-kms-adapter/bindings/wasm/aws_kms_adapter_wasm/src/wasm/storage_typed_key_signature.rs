@@ -94,7 +94,7 @@ impl WasmAwsKmsStorage {
   pub async fn generate_key_with_options(&self, options: WasmKeyType) -> Result<NewKeyData> {
     self
       .0
-      .generate_key_with_options((&options).try_into().unwrap())
+      .generate_key_with_options((&options).try_into()?)
       .await
       .map(|(key_id, pub_key)| NewKeyData::new(key_id, WasmTypedKeySignaturePublicKey(pub_key)))
       .wasm_result()
@@ -142,7 +142,7 @@ impl WasmAwsKmsStorage {
   ) -> Result<WasmSignerTypedKeySignature> {
     self
       .0
-      .get_signer_with_options(&key_id, &key_type.try_into().unwrap())
+      .get_signer_with_options(&key_id, &key_type.try_into()?)
       .map(WasmSignerTypedKeySignature)
       .wasm_result()
   }

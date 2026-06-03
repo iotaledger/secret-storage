@@ -3,6 +3,7 @@
 
 use std::error::Error;
 
+use anyhow::anyhow;
 use async_trait::async_trait;
 use blake2::Blake2b;
 use blake2::Digest;
@@ -14,6 +15,7 @@ use iota_interaction::types::crypto::Secp256k1IotaSignature;
 use iota_interaction::types::crypto::Secp256r1IotaSignature;
 use iota_sdk_types::Intent;
 use iota_sdk_types::IntentMessage;
+use secret_storage::Error as SecretStorageError;
 use secret_storage::Signer;
 use typed_key_signature::TypedKeySignature;
 
@@ -41,29 +43,38 @@ where
     ) -> secret_storage::Result<IotaKeySignatureSignature> {
         // Prepare intent message for signing
         let intent_msg = IntentMessage::new(Intent::iota_transaction(), data.clone());
-        let bcs_bytes = bcs::to_bytes(&intent_msg).unwrap();
+        let bcs_bytes = bcs::to_bytes(&intent_msg).map_err(|e| {
+            SecretStorageError::Other(anyhow!("failed to serialize intent message; {e}"))
+        })?;
 
         // Calculate digest to sign - use Blake2b-256 for intent message as per IOTA docs
         // Then ECDSA will internally use SHA-256
         let digest = Blake2b256::digest(&bcs_bytes);
 
         // signature as returned from AWS
-        let signature = self.inner.sign(&digest.to_vec()).await.unwrap();
+        let signature = self.inner.sign(&digest.to_vec()).await?;
 
         // build IOTA signature with public key
         let public_key_iota = Signer::<IotaKeySignature>::public_key(self).await?;
-        let iota_signature_bytes = to_iota_signature(signature.bytes(), &public_key_iota).unwrap();
-        let iota_signature = IotaKeySignatureSignature::from_bytes(&iota_signature_bytes).unwrap();
+        let iota_signature_bytes =
+            to_iota_signature(signature.bytes(), &public_key_iota).map_err(|e| {
+                SecretStorageError::Other(anyhow!("failed to convert to IOTA signature; {e}"))
+            })?;
+        let iota_signature =
+            IotaKeySignatureSignature::from_bytes(&iota_signature_bytes).map_err(|e| {
+                SecretStorageError::Other(anyhow!(
+                    "failed to create IOTA signature from bytes; {e}"
+                ))
+            })?;
 
         Ok(iota_signature)
     }
 
     async fn public_key(&self) -> secret_storage::Result<IotaKeySignaturePublicKey> {
-        let public_key = self.inner.public_key().await.unwrap();
+        let public_key = self.inner.public_key().await?;
 
         let public_key_iota =
-            convert_public_key_der_to_iota_public_key(public_key.bytes(), public_key.key_type())
-                .unwrap();
+            convert_public_key_der_to_iota_public_key(public_key.bytes(), public_key.key_type())?;
 
         Ok(public_key_iota)
     }
@@ -79,21 +90,21 @@ pub fn to_iota_signature(
 ) -> Result<Vec<u8>, Box<dyn Error>> {
     let scheme = public_key_iota.scheme().to_string();
     let (r_bytes, s_bytes) = if scheme == Secp256r1IotaSignature::SCHEME.to_string() {
-        let signature = p256::ecdsa::Signature::from_bytes(signature.into()).unwrap();
+        let signature = p256::ecdsa::Signature::from_bytes(signature.into())?;
         let (r, s) = signature.split_bytes();
         // Canonicalize s value for IOTA compliance
         let s_canonical = canonicalize_s_value_secp256r1(&s)?;
 
         (r.to_vec(), s_canonical.to_vec())
     } else if scheme == Secp256k1IotaSignature::SCHEME.to_string() {
-        let signature = k256::ecdsa::Signature::from_bytes(signature.into()).unwrap();
+        let signature = k256::ecdsa::Signature::from_bytes(signature.into())?;
         let (r, s) = signature.split_bytes();
         // Canonicalize s value for IOTA compliance
         let s_canonical = canonicalize_s_value_secp256k1(&s)?;
 
         (r.to_vec(), s_canonical.to_vec())
     } else if scheme == Ed25519IotaSignature::SCHEME.to_string() {
-        let signature = ed25519::Signature::from_slice(signature).unwrap();
+        let signature = ed25519::Signature::from_slice(signature)?;
 
         (signature.r_bytes().to_vec(), signature.s_bytes().to_vec())
     } else {

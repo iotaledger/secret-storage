@@ -35,13 +35,12 @@ where
         <IotaKeySignature as SecretStorageSignatureScheme>::PublicKey,
     )> {
         let (key_id, public_key_multi) =
-            self.inner.generate_key_with_options(options).await.unwrap();
+            self.inner.generate_key_with_options(options).await?;
 
         let public_key_iota = convert_public_key_der_to_iota_public_key(
             public_key_multi.bytes(),
             public_key_multi.key_type(),
-        )
-        .unwrap();
+        )?;
 
         Ok((key_id.into(), public_key_iota))
     }
@@ -63,8 +62,7 @@ where
     ) -> Result<Self::Signer> {
         let multi_signer = self
             .inner
-            .get_signer_with_options(&to_inner_key_id::<TInner>(key_id)?, options)
-            .unwrap();
+            .get_signer_with_options(&to_inner_key_id::<TInner>(key_id)?, options)?;
         let iota_signer = IotaCompatibleSigner {
             inner: multi_signer,
         };
@@ -85,14 +83,12 @@ where
         let public_key_multi = self
             .inner
             .public_key(&to_inner_key_id::<TInner>(key_id)?)
-            .await
-            .unwrap();
+            .await?;
 
         let public_key_iota = convert_public_key_der_to_iota_public_key(
             public_key_multi.bytes(),
             public_key_multi.key_type(),
-        )
-        .unwrap();
+        )?;
 
         Ok(public_key_iota)
     }
