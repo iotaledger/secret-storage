@@ -34,8 +34,7 @@ where
         String,
         <IotaKeySignature as SecretStorageSignatureScheme>::PublicKey,
     )> {
-        let (key_id, public_key_multi) =
-            self.inner.generate_key_with_options(options).await?;
+        let (key_id, public_key_multi) = self.inner.generate_key_with_options(options).await?;
 
         let public_key_iota = convert_public_key_der_to_iota_public_key(
             public_key_multi.bytes(),
