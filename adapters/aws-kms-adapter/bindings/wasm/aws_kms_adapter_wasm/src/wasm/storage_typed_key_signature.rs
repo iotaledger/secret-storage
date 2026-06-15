@@ -18,9 +18,9 @@ use crate::utils::aws::StaticCredentials;
 use crate::utils::aws::WasmHttpClient;
 use crate::utils::aws::WasmSleep;
 use crate::utils::aws::WasmTimeSource;
+use crate::wasm::signer_typed_key_signature::WasmSignerTypedKeySignature;
 use crate::wasm::typed_key_signature::WasmKeyType;
 use crate::wasm::typed_key_signature::WasmTypedKeySignaturePublicKey;
-use crate::wasm::signer_typed_key_signature::WasmSignerTypedKeySignature;
 
 #[wasm_bindgen(js_name = AwsKmsStorage)]
 pub struct WasmAwsKmsStorage(AwsKmsStorage);
@@ -62,10 +62,10 @@ impl WasmAwsKmsStorage {
   }
 }
 
-#[wasm_bindgen]
+#[wasm_bindgen(getter_with_clone)]
 pub struct NewKeyData {
-  pub(crate) key_id: String,
-  pub(crate) public_key: WasmTypedKeySignaturePublicKey,
+  pub key_id: String,
+  pub public_key: WasmTypedKeySignaturePublicKey,
 }
 
 impl NewKeyData {
@@ -74,18 +74,18 @@ impl NewKeyData {
   }
 }
 
-#[wasm_bindgen]
-impl NewKeyData {
-  #[wasm_bindgen(getter)]
-  pub fn key_id(&self) -> String {
-    self.key_id.clone()
-  }
+// #[wasm_bindgen]
+// impl NewKeyData {
+//   #[wasm_bindgen(getter)]
+//   pub fn key_id(&self) -> String {
+//     self.key_id.clone()
+//   }
 
-  #[wasm_bindgen(getter)]
-  pub fn public_key(&self) -> WasmTypedKeySignaturePublicKey {
-    self.public_key.clone()
-  }
-}
+//   #[wasm_bindgen(getter)]
+//   pub fn public_key(&self) -> WasmTypedKeySignaturePublicKey {
+//     self.public_key.clone()
+//   }
+// }
 
 // Implements `KeyGenerate<TypedKeySignature, String>` forWASM storage
 #[wasm_bindgen(js_class = AwsKmsStorage)]
@@ -135,11 +135,7 @@ impl WasmAwsKmsStorage {
 #[wasm_bindgen(js_class = AwsKmsStorage)]
 impl WasmAwsKmsStorage {
   #[wasm_bindgen(js_name = "getSignerWithOptions")]
-  pub fn get_signer_with_options(
-    &self,
-    key_id: String,
-    key_type: &WasmKeyType,
-  ) -> Result<WasmSignerTypedKeySignature> {
+  pub fn get_signer_with_options(&self, key_id: String, key_type: &WasmKeyType) -> Result<WasmSignerTypedKeySignature> {
     self
       .0
       .get_signer_with_options(&key_id, &key_type.try_into()?)
