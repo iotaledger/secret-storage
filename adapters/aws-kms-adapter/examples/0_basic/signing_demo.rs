@@ -31,10 +31,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     key_spec: Some(KeySpec::EccNistP256),
   });
 
-  let (key_id, _) = storage.generate_key_with_options(KeyType::Secp256r1DerEncoded).await?;
+  let (key_id, _) = storage.generate_key_with_options(KeyType::Secp256r1).await?;
   println!("Generated key: {key_id}");
 
-  let signer = storage.get_signer_with_options(&key_id, &KeyType::Secp256r1DerEncoded)?;
+  let signer = storage.get_signer_with_options(&key_id, &KeyType::Secp256r1)?;
 
   let messages: Vec<Vec<u8>> = vec![
         b"Hello, IOTA Secret Storage!".to_vec(),

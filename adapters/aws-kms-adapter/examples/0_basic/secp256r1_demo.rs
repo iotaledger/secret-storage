@@ -29,7 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   });
 
   println!("Generating secp256r1 key...");
-  let (key_id, public_key) = storage.generate_key_with_options(KeyType::Secp256r1DerEncoded).await?;
+  let (key_id, public_key) = storage.generate_key_with_options(KeyType::Secp256r1).await?;
   println!("Key ID: {key_id}");
   println!("Public key: {} bytes (DER)", public_key.bytes().len());
 

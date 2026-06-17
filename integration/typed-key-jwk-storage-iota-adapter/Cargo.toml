@@ -5,6 +5,8 @@ edition = "2024"
 
 [dependencies]
 async-trait = "0.1"
+k256 = { version = "0.13.3", default-features = false, features = ["std", "ecdsa", "ecdsa-core"] }
+p256 = { version = "0.13.2", default-features = false, features = ["std", "ecdsa", "ecdsa-core"] }
 identity_iota = { git = "https://github.com/iotaledger/identity.git", tag = "v1.9.9-beta.1", package = "identity_iota", default-features = false }
 iota_interaction = { git = "https://github.com/iotaledger/product-core.git", tag = "v0.8.20", package = "iota_interaction", default-features = false }
 secret-storage = { path = "../../core/secret-storage", default-features = false }

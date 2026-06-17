@@ -18,6 +18,7 @@ impl TypedKeySignaturePublicKey {
         Self { bytes, key_type }
     }
 
+    /// Returns the DER-encoded SubjectPublicKeyInfo (SPKI/X.509) bytes for all key types.
     pub fn bytes(&self) -> &Vec<u8> {
         &self.bytes
     }

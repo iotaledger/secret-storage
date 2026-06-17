@@ -59,6 +59,8 @@ export async function requestFunds(address: string) {
     });
 }
 
+/** Returns the IOTA identity SDK key type string for the given algorithm (e.g. `"secp256r1"`).
+ *  These strings are dictated by the identity SDK, not by {@link KeyType}. */
 function keyTypeForAlg(alg: JwsAlgorithm): string {
     switch (alg) {
         case JwsAlgorithm.EdDSA:  return "Ed25519";
@@ -68,11 +70,13 @@ function keyTypeForAlg(alg: JwsAlgorithm): string {
     }
 }
 
-function algToDerKeyType(alg: JwsAlgorithm): KeyType {
+/** Returns the {@link KeyType} variant string for the given algorithm (e.g. `"Secp256r1"`).
+ *  These strings match the {@link KeyType} union from the AWS KMS adapter, not the identity SDK key type strings. */
+function algToKeyType(alg: JwsAlgorithm): KeyType {
     switch (alg) {
-        case JwsAlgorithm.EdDSA:  return "Ed25519DerEncoded";
-        case JwsAlgorithm.ES256:  return "Secp256r1DerEncoded";
-        case JwsAlgorithm.ES256K: return "Secp256k1DerEncoded";
+        case JwsAlgorithm.EdDSA:  return "Ed25519";
+        case JwsAlgorithm.ES256:  return "Secp256r1";
+        case JwsAlgorithm.ES256K: return "Secp256k1";
         default: throw new Error(`unsupported algorithm: ${alg}`);
     }
 }
@@ -95,10 +99,11 @@ export async function createDocumentForNetwork(storage: Storage, network: string
     return { unpublished, fragment, jwkKeyId };
 }
 
+/** Returns the {@link JwsAlgorithm} for the given {@link KeyType} variant string. Inverse of {@link algToKeyType}. */
 export function algFromKeyType(keyType: KeyType): JwsAlgorithm {
-    if (keyType === "Ed25519DerEncoded") return JwsAlgorithm.EdDSA;
-    if (keyType === "Secp256r1DerEncoded") return JwsAlgorithm.ES256;
-    if (keyType === "Secp256k1DerEncoded") return JwsAlgorithm.ES256K;
+    if (keyType === "Ed25519") return JwsAlgorithm.EdDSA;
+    if (keyType === "Secp256r1") return JwsAlgorithm.ES256;
+    if (keyType === "Secp256k1") return JwsAlgorithm.ES256K;
     throw new Error(`unsupported key type: ${JSON.stringify(keyType)}`);
 }
 
@@ -205,7 +210,7 @@ export async function getFundedClient(storage: Storage, awsStorage: AwsKmsStorag
     const txKeyId = generate.keyId();
     console.log(`Generated tx signing key — AWS_KEY_ID=${txKeyId}`);
 
-    const rawSigner = awsStorage.getSignerWithOptions(txKeyId, algToDerKeyType(alg));
+    const rawSigner = awsStorage.getSignerWithOptions(txKeyId, algToKeyType(alg));
     const signer = new IotaCompatibleSigner(rawSigner);
     const identityClient = await IdentityClient.create(identityClientReadOnly, signer as any);
 

@@ -18,7 +18,7 @@ pub fn convert_public_key_der_to_iota_public_key(
     key_type: &KeyType,
 ) -> secret_storage::Result<IotaKeySignaturePublicKey> {
     let public_key = match key_type {
-        KeyType::Ed25519DerEncoded => {
+        KeyType::Ed25519 => {
             let public_key_bytes =
                 <ed25519::pkcs8::PublicKeyBytes as pkcs8::DecodePublicKey>::from_public_key_der(
                     public_key_der,
@@ -37,7 +37,7 @@ pub fn convert_public_key_der_to_iota_public_key(
                 ))
             })?
         }
-        KeyType::Secp256r1DerEncoded => {
+        KeyType::Secp256r1 => {
             let decoded = p256::PublicKey::from_public_key_der(public_key_der).map_err(|e| {
                 SecretStorageError::Other(anyhow!("failed to decode SECP256R1 public key; {e}"))
             })?;
@@ -49,7 +49,7 @@ pub fn convert_public_key_der_to_iota_public_key(
                 ))
             })?
         }
-        KeyType::Secp256k1DerEncoded => {
+        KeyType::Secp256k1 => {
             let decoded = k256::PublicKey::from_public_key_der(public_key_der).map_err(|e| {
                 SecretStorageError::Other(anyhow!("failed to decode SECP256K1 public key; {e}"))
             })?;

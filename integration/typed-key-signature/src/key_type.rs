@@ -4,6 +4,8 @@
 use serde::Deserialize;
 use serde::Serialize;
 
+/// Identifies the signing algorithm of a key pair. Does not describe byte encoding —
+/// see [`TypedKeySignaturePublicKey::bytes`] and [`TypedKeySignatureSignature::bytes`] for encoding details.
 #[non_exhaustive]
 #[derive(
     Default,
@@ -20,8 +22,8 @@ use serde::Serialize;
 )]
 pub enum KeyType {
     #[default]
-    Ed25519DerEncoded,
-    Secp256k1DerEncoded,
-    Secp256r1DerEncoded,
+    Ed25519,
+    Secp256k1,
+    Secp256r1,
     Custom(String),
 }

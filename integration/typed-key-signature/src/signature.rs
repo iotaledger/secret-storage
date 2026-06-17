@@ -18,6 +18,9 @@ impl TypedKeySignatureSignature {
         Self { bytes, key_type }
     }
 
+    /// Returns the raw signature bytes. Encoding depends on the key type:
+    /// - `Secp256k1` / `Secp256r1`: DER-encoded (ANSI X9.62 / RFC 3279)
+    /// - `Ed25519`: raw 64-byte format (RFC 8032)
     pub fn bytes(&self) -> &Vec<u8> {
         &self.bytes
     }

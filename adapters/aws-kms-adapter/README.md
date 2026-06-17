@@ -8,11 +8,11 @@ Implements `KeyGenerate`, `KeyGet`, `KeySignWithOptions`, `KeyDelete`, and `KeyE
 
 ## Supported key types
 
-| `KeyType` variant     | Algorithm | AWS KeySpec             |
-| --------------------- | --------- | ----------------------- |
-| `Ed25519DerEncoded`   | EdDSA     | `ECC_NIST_EDWARDS25519` |
-| `Secp256r1DerEncoded` | ES256     | `ECC_NIST_P256`         |
-| `Secp256k1DerEncoded` | ES256K    | `ECC_SECG_P256K1`       |
+| `KeyType` variant | Algorithm | AWS KeySpec             |
+| ----------------- | --------- | ----------------------- |
+| `Ed25519`         | EdDSA     | `ECC_NIST_EDWARDS25519` |
+| `Secp256r1`       | ES256     | `ECC_NIST_P256`         |
+| `Secp256k1`       | ES256K    | `ECC_SECG_P256K1`       |
 
 ## Configuration
 

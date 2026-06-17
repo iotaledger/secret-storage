@@ -4,6 +4,8 @@
 use std::str::FromStr;
 
 use async_trait::async_trait;
+use k256::ecdsa::Signature as K256Signature;
+use p256::ecdsa::Signature as P256Signature;
 use identity_iota::storage::JwkGenOutput;
 use identity_iota::storage::JwkStorage;
 use identity_iota::storage::KeyId;
@@ -125,7 +127,25 @@ where
                 .with_custom_message(e.to_string())
         })?;
 
-        Ok(signature.bytes().clone())
+        let sig_bytes = match alg {
+            JwsAlgorithm::ES256 => P256Signature::from_der(signature.bytes())
+                .map_err(|e| {
+                    KeyStorageError::new(KeyStorageErrorKind::Unspecified)
+                        .with_custom_message(format!("failed to decode P256 DER signature: {e}"))
+                })?
+                .to_bytes()
+                .to_vec(),
+            JwsAlgorithm::ES256K => K256Signature::from_der(signature.bytes())
+                .map_err(|e| {
+                    KeyStorageError::new(KeyStorageErrorKind::Unspecified)
+                        .with_custom_message(format!("failed to decode K256 DER signature: {e}"))
+                })?
+                .to_bytes()
+                .to_vec(),
+            _ => signature.bytes().clone(),
+        };
+
+        Ok(sig_bytes)
     }
 
     async fn delete(&self, key_id: &KeyId) -> KeyStorageResult<()> {
@@ -173,9 +193,9 @@ fn identity_key_type_to_typed_key_signature(
     key_type: &IdentityStorageKeyType,
 ) -> KeyStorageResult<TypedKeySignatureKeyType> {
     match key_type.as_str() {
-        "Ed25519" => Ok(TypedKeySignatureKeyType::Ed25519DerEncoded),
-        "secp256r1" => Ok(TypedKeySignatureKeyType::Secp256r1DerEncoded),
-        "secp256k1" => Ok(TypedKeySignatureKeyType::Secp256k1DerEncoded),
+        "Ed25519" => Ok(TypedKeySignatureKeyType::Ed25519),
+        "secp256r1" => Ok(TypedKeySignatureKeyType::Secp256r1),
+        "secp256k1" => Ok(TypedKeySignatureKeyType::Secp256k1),
         other => Err(
             KeyStorageError::new(KeyStorageErrorKind::UnsupportedKeyType)
                 .with_custom_message(format!("key type \"{}\" is not supported", other)),
@@ -185,9 +205,9 @@ fn identity_key_type_to_typed_key_signature(
 
 fn alg_to_key_type(alg: &JwsAlgorithm) -> KeyStorageResult<TypedKeySignatureKeyType> {
     let key_type = match alg {
-        JwsAlgorithm::ES256 => TypedKeySignatureKeyType::Secp256r1DerEncoded,
-        JwsAlgorithm::ES256K => TypedKeySignatureKeyType::Secp256k1DerEncoded,
-        JwsAlgorithm::EdDSA => TypedKeySignatureKeyType::Ed25519DerEncoded,
+        JwsAlgorithm::ES256 => TypedKeySignatureKeyType::Secp256r1,
+        JwsAlgorithm::ES256K => TypedKeySignatureKeyType::Secp256k1,
+        JwsAlgorithm::EdDSA => TypedKeySignatureKeyType::Ed25519,
         other => {
             return Err(
                 KeyStorageError::new(KeyStorageErrorKind::UnsupportedKeyType)

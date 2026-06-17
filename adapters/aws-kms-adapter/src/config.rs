@@ -153,9 +153,9 @@ impl TryFrom<KeySpec> for KeyType {
 
   fn try_from(value: KeySpec) -> Result<Self, Self::Error> {
     let key_type = match value {
-      crate::KeySpec::EccNistP256 => Self::Secp256r1DerEncoded,
-      crate::KeySpec::EccSecgP256K1 => Self::Secp256k1DerEncoded,
-      crate::KeySpec::EccNistEdwards25519 => Self::Ed25519DerEncoded,
+      crate::KeySpec::EccNistP256 => Self::Secp256r1,
+      crate::KeySpec::EccSecgP256K1 => Self::Secp256k1,
+      crate::KeySpec::EccNistEdwards25519 => Self::Ed25519,
     };
 
     Ok(key_type)
@@ -167,9 +167,9 @@ impl TryFrom<KeyType> for KeySpec {
 
   fn try_from(value: KeyType) -> Result<Self, Self::Error> {
     let key_spec = match value {
-      KeyType::Secp256r1DerEncoded => Self::EccNistP256,
-      KeyType::Secp256k1DerEncoded => Self::EccSecgP256K1,
-      KeyType::Ed25519DerEncoded => Self::EccNistEdwards25519,
+      KeyType::Secp256r1 => Self::EccNistP256,
+      KeyType::Secp256k1 => Self::EccSecgP256K1,
+      KeyType::Ed25519 => Self::EccNistEdwards25519,
       other => {
         return Err(AwsKmsError::UnsupportedKeyType(other.to_string()));
       }
@@ -242,9 +242,9 @@ impl TryInto<SigningAlgorithmSpec> for KeyType {
 
   fn try_into(self) -> Result<SigningAlgorithmSpec, Self::Error> {
     let alg = match self {
-      KeyType::Ed25519DerEncoded => SigningAlgorithmSpec::Ed25519Sha512,
-      KeyType::Secp256k1DerEncoded => SigningAlgorithmSpec::EcdsaSha256,
-      KeyType::Secp256r1DerEncoded => SigningAlgorithmSpec::EcdsaSha256,
+      KeyType::Ed25519 => SigningAlgorithmSpec::Ed25519Sha512,
+      KeyType::Secp256k1 => SigningAlgorithmSpec::EcdsaSha256,
+      KeyType::Secp256r1 => SigningAlgorithmSpec::EcdsaSha256,
 
       _other => {
         return Err(AwsKmsError::UnsupportedKeyUsage(

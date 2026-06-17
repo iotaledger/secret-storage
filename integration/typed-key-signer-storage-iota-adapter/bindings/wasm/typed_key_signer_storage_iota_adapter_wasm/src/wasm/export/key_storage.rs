@@ -97,9 +97,9 @@ impl WasmIotaCompatibleKeyStorage {
 
 fn wasm_key_type_to_typed(wt: WasmKeyType) -> KeyType {
     match wt {
-        WasmKeyType::Secp256r1DerEncoded => KeyType::Secp256r1DerEncoded,
-        WasmKeyType::Secp256k1DerEncoded => KeyType::Secp256k1DerEncoded,
-        WasmKeyType::Ed25519DerEncoded => KeyType::Ed25519DerEncoded,
+        WasmKeyType::Secp256r1 => KeyType::Secp256r1,
+        WasmKeyType::Secp256k1 => KeyType::Secp256k1,
+        WasmKeyType::Ed25519 => KeyType::Ed25519,
         WasmKeyType::Custom(s) => KeyType::Custom(s),
     }
 }

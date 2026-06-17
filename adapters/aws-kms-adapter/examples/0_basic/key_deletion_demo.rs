@@ -29,13 +29,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   });
 
   // Demo 1: schedule deletion via KMS key ID
-  let (key_id, _) = storage.generate_key_with_options(KeyType::Secp256r1DerEncoded).await?;
+  let (key_id, _) = storage.generate_key_with_options(KeyType::Secp256r1).await?;
   println!("Created key: {key_id}");
   storage.delete(&key_id).await?;
   println!("Deletion scheduled for: {key_id}");
 
   // Demo 2: verify exist() reflects deletion
-  let (key_id2, _) = storage.generate_key_with_options(KeyType::Secp256r1DerEncoded).await?;
+  let (key_id2, _) = storage.generate_key_with_options(KeyType::Secp256r1).await?;
   println!("Created key: {key_id2}");
   println!("Exists before deletion: {}", storage.exist(&key_id2).await?);
   storage.delete(&key_id2).await?;

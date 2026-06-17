@@ -18,9 +18,9 @@ mod key_type {
     #[derive(Tsify, Serialize, Deserialize)]
     #[tsify(into_wasm_abi, from_wasm_abi)]
     pub enum KeyType {
-        Secp256r1DerEncoded,
-        Secp256k1DerEncoded,
-        Ed25519DerEncoded,
+        Secp256r1,
+        Secp256k1,
+        Ed25519,
         #[serde(rename = "custom")]
         Custom(String),
     }
