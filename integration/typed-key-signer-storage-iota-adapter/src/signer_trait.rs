@@ -56,8 +56,8 @@ where
 
         // build IOTA signature with public key
         let public_key_iota = Signer::<IotaKeySignature>::public_key(self).await?;
-        let iota_signature_bytes =
-            iota_signature_from_der(signature.bytes(), &public_key_iota).map_err(|e| {
+        let iota_signature_bytes = iota_signature_from_der(signature.bytes(), &public_key_iota)
+            .map_err(|e| {
                 SecretStorageError::Other(anyhow!("failed to convert to IOTA signature; {e}"))
             })?;
         let iota_signature =

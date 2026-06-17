@@ -4,8 +4,6 @@
 use std::str::FromStr;
 
 use async_trait::async_trait;
-use k256::ecdsa::Signature as K256Signature;
-use p256::ecdsa::Signature as P256Signature;
 use identity_iota::storage::JwkGenOutput;
 use identity_iota::storage::JwkStorage;
 use identity_iota::storage::KeyId;
@@ -18,6 +16,8 @@ use identity_iota::verification::jwk::ToJwk;
 use identity_iota::verification::jws::JwsAlgorithm;
 use iota_interaction::OptionalSend;
 use iota_interaction::OptionalSync;
+use k256::ecdsa::Signature as K256Signature;
+use p256::ecdsa::Signature as P256Signature;
 use secret_storage::KeyDelete;
 use secret_storage::KeyExist;
 use secret_storage::KeyGenerate;
