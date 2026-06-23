@@ -1,0 +1,43 @@
+[package]
+name = "aws-kms-adapter"
+version = "0.1.0"
+edition = "2021"
+authors = ["IOTA Stiftung"]
+homepage = "https://www.iota.org"
+license = "Apache-2.0"
+repository = "https://github.com/iotaledger/secret-storage"
+rust-version = "1.65"
+description = "AWS KMS adapter for secret-storage core traits"
+keywords = ["crypto", "aws", "kms", "storage", "keys"]
+
+[dependencies]
+anyhow = "1"
+async-trait = "0.1"
+typed-key-signature = { path = "../../integration/typed-key-signature", default-features = false }
+secret-storage = { path = "../../core/secret-storage", default-features = false }
+serde = { version = "1.0", features = ["derive"] }
+strum = { version = "0.27", features = ["derive"] }
+thiserror = "2"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+aws-config = "1.1"
+aws-sdk-kms = "1.94"
+tokio = { version = "1.0", features = ["full"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+aws-config = { version = "1.1", default-features = false }
+aws-sdk-kms = { version = "1.94", default-features = false }
+getrandom_0_2 = { package = "getrandom", version = "0.2", default-features = false, features = ["js"] }
+
+[features]
+default = [
+    "env",
+    "profile",
+    "send-sync-storage"]
+env = []
+profile = []
+send-sync-storage = [
+    "typed-key-signature/send-sync",
+    "secret-storage/send-sync-storage",
+]
+

@@ -1,0 +1,11 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@iota/aws_kms_adapter_wasm/*": [
+        "./*"
+      ]
+    }
+  }
+}

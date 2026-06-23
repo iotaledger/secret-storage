@@ -1,0 +1,44 @@
+{
+  "name": "@iota/aws_kms_adapter_wasm",
+  "version": "0.0.1",
+  "author": "IOTA Foundation <info@iota.org>",
+  "description": "",
+  "homepage": "https://www.iota.org",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iotaledger/secret-storage"
+  },
+  "directories": {
+    "example": "examples"
+  },
+  "scripts": {
+    "build:src": "cargo build --lib --release --target wasm32-unknown-unknown --target-dir ../target",
+    "prebundle:nodejs": "rimraf node",
+    "bundle:nodejs": "wasm-bindgen ../target/wasm32-unknown-unknown/release/aws_kms_adapter_wasm.wasm --typescript --weak-refs --target nodejs --out-dir node && node ../build/node aws_kms_adapter_wasm && tsc --project ./lib/tsconfig.json && node ../build/replace_paths ./lib/tsconfig.json node aws_kms_adapter_wasm",
+    "build:nodejs": "npm run build:src && npm run bundle:nodejs && wasm-opt -O node/aws_kms_adapter_wasm_bg.wasm -o node/aws_kms_adapter_wasm_bg.wasm",
+    "build": "npm run build:nodejs",
+    "example:node": "ts-node --project tsconfig.node.json -r tsconfig-paths/register ./examples/src/main.ts",
+    "fmt": "dprint fmt"
+  },
+  "bugs": {
+    "url": "https://github.com/iotaledger/secret-storage/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "node/*"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.1.0",
+    "typescript": "^5.7.3"
+  },
+  "peerDependencies": {},
+  "engines": {
+    "node": ">=20"
+  }
+}

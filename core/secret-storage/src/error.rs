@@ -11,6 +11,8 @@ pub enum Error {
     KeyNotFound(String),
     #[error("unable to communicate with key store: {0}")]
     StoreDisconnected(String),
+    #[error("invalid config given: {0}")]
+    InvalidConfig(String),
     #[error("failed to generate key with provided options")]
     InvalidOptions,
     #[error(transparent)]

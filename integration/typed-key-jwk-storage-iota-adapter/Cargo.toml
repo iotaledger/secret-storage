@@ -1,0 +1,27 @@
+[package]
+name = "typed-key-jwk-storage-iota-adapter"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+async-trait = "0.1"
+k256 = { version = "0.13.3", default-features = false, features = ["std", "ecdsa", "ecdsa-core"] }
+p256 = { version = "0.13.2", default-features = false, features = ["std", "ecdsa", "ecdsa-core"] }
+identity_iota = { git = "https://github.com/iotaledger/identity.git", tag = "v1.9.9-beta.1", package = "identity_iota", default-features = false }
+iota_interaction = { git = "https://github.com/iotaledger/product-core.git", tag = "v0.8.20", package = "iota_interaction", default-features = false }
+secret-storage = { path = "../../core/secret-storage", default-features = false }
+typed-key-signature = { path = "../typed-key-signature", default-features = false }
+typed-key-signer-storage-iota-adapter = { path = "../typed-key-signer-storage-iota-adapter", default-features = false }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom_0_2 = { package = "getrandom", version = "0.2", default-features = false, features = ["js"] }
+
+[features]
+default = ["send-sync-storage"]
+send-sync-storage = [
+    "identity_iota/send-sync",
+    "iota_interaction/send-sync-transaction",
+    "typed-key-signature/send-sync",
+    "secret-storage/send-sync-storage",
+    "typed-key-signer-storage-iota-adapter/send-sync-storage"
+]

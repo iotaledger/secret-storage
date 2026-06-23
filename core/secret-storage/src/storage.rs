@@ -68,3 +68,18 @@ pub trait KeyExist<I> {
 pub trait KeyGet<K: SignatureScheme, I> {
     async fn public_key(&self, key_id: &I) -> Result<K::PublicKey>;
 }
+
+/// KeySignWithOptions is used to sign a hash with a private key located in a key store.
+/// The method return a [`Signer`] object.
+///
+/// This variant allows to pass in in an options object, that the signer will use.
+#[cfg_attr(not(feature = "send-sync-storage"), async_trait(?Send))]
+#[cfg_attr(feature = "send-sync-storage", async_trait)]
+pub trait KeySignWithOptions<K: SignatureScheme, I> {
+    type Signer: Signer<K>;
+    #[cfg(not(feature = "send-sync-storage"))]
+    type Options;
+    #[cfg(feature = "send-sync-storage")]
+    type Options: Send;
+    fn get_signer_with_options(&self, key_id: &I, options: &Self::Options) -> Result<Self::Signer>;
+}

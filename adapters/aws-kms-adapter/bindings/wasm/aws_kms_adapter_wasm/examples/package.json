@@ -1,0 +1,24 @@
+{
+  "name": "aws-kms-adapter-examples",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Examples for AWS KMS adapter WASM bindings",
+  "license": "Apache-2.0",
+  "scripts": {
+    "example": "ts-node --project tsconfig.node.json -r tsconfig-paths/register ./src/main.ts"
+  },
+  "dependencies": {
+    "@iota/aws_kms_adapter_wasm": "file:../",
+    "@iota/identity-wasm": "1.9.6-beta.1",
+    "@iota/iota-sdk": "^1.14.0",
+    "@iota/typed-key-jwk-storage-iota-adapter-wasm": "file:../../../../../../integration/typed-key-jwk-storage-iota-adapter/bindings/wasm/typed_key_jwk_storage_iota_adapter_wasm/",
+    "@iota/typed-key-signer-storage-iota-adapter-wasm": "file:../../../../../../integration/typed-key-signer-storage-iota-adapter/bindings/wasm/typed_key_signer_storage_iota_adapter_wasm/",
+    "ts-node": "^10.9.2"
+  },
+  "devDependencies": {
+    "tsconfig-paths": "^4.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

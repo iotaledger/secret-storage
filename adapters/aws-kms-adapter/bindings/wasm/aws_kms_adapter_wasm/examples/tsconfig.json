@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "lib": [
+      "ES2020",
+      "DOM"
+    ],
+    "target": "ES2022",
+    "declaration": true,
+    "sourceMap": true,
+    "strict": true,
+    "moduleResolution": "node",
+    "noImplicitAny": true,
+    "preserveConstEnums": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@iota/aws_kms_adapter_wasm/*": ["../*"],
+      "@iota/typed-key-jwk-storage-iota-adapter-wasm/*": ["../../../../../../integration/typed-key-jwk-storage-iota-adapter/bindings/wasm/typed_key_jwk_storage_iota_adapter_wasm/*"],
+      "@iota/typed-key-signer-storage-iota-adapter-wasm/*": ["../../../../../../integration/typed-key-signer-storage-iota-adapter/bindings/wasm/typed_key_signer_storage_iota_adapter_wasm/*"]
+    }
+  },
+  "exclude": [
+    "node_modules"
+  ]
+}

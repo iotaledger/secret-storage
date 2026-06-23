@@ -1,0 +1,7 @@
+[advisories]
+ignore = [
+  "RUSTSEC-2023-0071", # temporary ignore until fix is provided
+  "RUSTSEC-2026-0104", # Issue with an old rustls-webpki version used by the legacy SDK.
+  "RUSTSEC-2026-0098", # Issue with an old rustls-webpki version used by the legacy SDK.
+  "RUSTSEC-2026-0099", # Issue with an old rustls-webpki version used by the legacy SDK.
+]

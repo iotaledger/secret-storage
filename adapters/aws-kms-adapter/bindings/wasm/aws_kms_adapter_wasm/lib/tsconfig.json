@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.node.json",
+  "compilerOptions": {
+    "baseUrl": "./",
+    "paths": {
+      "~aws_kms_adapter_wasm": [
+        "../node/aws_kms_adapter_wasm",
+        "./aws_kms_adapter_wasm.js"
+      ]
+    },
+    "outDir": "../node",
+    "declarationDir": "../node"
+  }
+}

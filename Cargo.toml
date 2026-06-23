@@ -1,21 +1,24 @@
-[package]
-name = "secret-storage"
-version = "0.3.0"
-edition = "2021"
-authors = ["IOTA Stiftung"]
-homepage = "https://www.iota.org"
-license = "Apache-2.0"
-repository = "https://github.com/iotaledger/secret-storage"
-rust-version = "1.65"
-readme = "./README.md"
-description = "A flexible and secure key storage interface for working with cryptographic keys and signatures with modular traits for key generation, signing, and management."
-keywords = ["crypto", "storage", "keys", "signatures", "security"]
+[workspace]
+resolver = "2"
+members = [
+    "core/secret-storage",
+    "adapters/aws-kms-adapter",
+    "adapters/aws-kms-adapter/examples",
+    "integration/typed-key-signature",
+    "integration/typed-key-signer-storage-iota-adapter",
+    "integration/typed-key-jwk-storage-iota-adapter",
+]
 
-[dependencies]
+exclude = [
+    "adapters/aws-kms-adapter/bindings/wasm/aws-kms-adapter-wasm",
+    "integration/typed-key-signer-storage-iota-adapter/bindings/wasm/typed_key_signer_storage_iota_adapter_wasm",
+    "integration/typed-key-jwk-storage-iota-adapter/bindings/wasm/typed_key_jwk_storage_iota_adapter_wasm",
+]
+
+[workspace.dependencies]
 anyhow = "1"
 thiserror = "2"
 async-trait = "0.1"
 
-[features]
-default = ["send-sync-storage"]
-send-sync-storage = []
+[patch."https://github.com/iotaledger/secret-storage.git"]
+secret-storage = { path = "core/secret-storage" }
