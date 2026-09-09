@@ -25,7 +25,7 @@ pub trait Signer<S: Signature> {
     // NOTE: this implies the signer holds a public key internally
     // and hence its construction from storage must be async.
     fn public_key(&self) -> &S::VerifyingKey;
-    async fn sign(&self, data: &[u8]) -> Result<S, ()>;
+    async fn sign(&self, data: &[u8]) -> Result<S, crate::Error>;
 }
 
 #[cfg(feature = "iota")]
